@@ -1,0 +1,48 @@
+# Arquivos auxiliares LaTeX
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+
+# Arquivos gerados por compiladores
+*.dvi
+*.xdv
+*.ps
+
+# Arquivos de sincronização e índice
+*.synctex.gz
+*.synctex(busy)
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*.run.xml
+*.fdb_latexmk
+
+# Arquivos de glossário/acrônimos
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.glsdefs
+
+# Arquivos de índice
+*.idx
+*.ilg
+*.ind
+*.ist
+
+# Arquivos temporários
+*.tmp
+*.bak
+*.backup
+*~

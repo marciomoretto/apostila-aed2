@@ -1,0 +1,61 @@
+\chapter{Introdução}
+
+Estruturas de dados e algoritmos são os pilares fundamentais da ciência da computação. 
+Enquanto algoritmos são sequências finitas de instruções bem definidas para resolver um problema ou realizar uma tarefa, estruturas de dados são formas de organizar, armazenar e acessar informações de maneira eficiente. 
+Juntos, eles permitem que possamos resolver problemas complexos de forma sistemática, com clareza, precisão e eficiência. 
+O mesmo problema pode ser abordado por diferentes algoritmos, e a escolha da estrutura de dados adequada muitas vezes determina o desempenho final da solução.
+
+Compreender estruturas de dados e algoritmos é essencial para escrever programas corretos, legíveis e eficientes. 
+Saber quando usar uma tabela de dispersão em vez de uma lista, ou uma árvore balanceada em vez de um vetor ordenado, é o que distingue uma solução ingênua de uma solução robusta e escalável. 
+Além disso, a análise de algoritmos -- tanto no pior caso quanto em média -- fornece ferramentas para comparar alternativas e justificar decisões de projeto. 
+Estudar esses temas é, portanto, um exercício de precisão lógica, mas também de criatividade na construção de soluções.
+
+Estas notas foram elaboradas para acompanhar a disciplina e pressupõem que os alunos já tenham familiaridade com os fundamentos da análise de algoritmos -- como notação assintótica, complexidade de tempo e espaço, e noções básicas de recursão --, conteúdos geralmente abordados na disciplina {\em Introdução à Análise de Algoritmos}. 
+Também se espera conhecimento prévio sobre estruturas de dados elementares, como vetores, listas ligadas, pilhas e filas, que são introduzidas em {\em Algoritmos e Estruturas de Dados 1}.
+
+Nesta disciplina, o foco será o estudo de três classes centrais de estruturas de dados: tabelas de dispersão (hashes), árvores de busca e grafos. 
+Esses temas serão tratados do ponto de vista conceitual e prático, com ênfase na análise de desempenho e nas aplicações típicas de cada estrutura. 
+O objetivo é proporcionar uma base sólida que permita aos alunos projetar, implementar e analisar algoritmos eficientes para problemas que envolvem organização e busca de informação.
+
+Nesta apostila, as estruturas de dados serão apresentadas inicialmente de forma abstrata, por meio de especificações em termos de Tipos Abstratos de Dados (TADs), seguidas por implementações em pseudocódigo e em linguagem C. 
+A descrição abstrata permite compreender a funcionalidade esperada de cada estrutura sem se comprometer com detalhes de implementação, promovendo uma visão mais clara e geral. 
+O pseudocódigo, por sua vez, serve como ponte entre a abstração conceitual e a codificação concreta, permitindo expressar os algoritmos de maneira legível e independente de linguagem. 
+As implementações em C buscam fornecer uma visão prática e eficiente, permitindo ao aluno experimentar diretamente com os conceitos em exercícios e projetos.
+
+Nesta apostila, os conteúdos são organizados em doze capítulos, acompanhando a sequência didática da disciplina. 
+Iniciamos com uma introdução ao conceito de Tipos Abstratos de Dados (TADs), com ênfase no TAD dicionário e em suas duas variações principais: o dicionário simples e o dicionário ordenado. 
+Em seguida, tratamos das tabelas de dispersão e funções de hash, abordando o conceito de função de dispersão, o fator de carga e aplicações como verificação de duplicatas e contagem de frequência.
+
+Os capítulos seguintes se dedicam a técnicas de tratamento de colisões em tabelas de hash, incluindo encadeamento e sondagem linear, com menções a estratégias mais avançadas como sondagem quadrática e duplo hash. 
+Também discutimos o desempenho dessas estruturas, analisando casos médios e piores, e revisitamos listas ligadas como suporte para algumas implementações.
+
+Na segunda parte do curso, o foco se volta para árvores. 
+Iniciamos pelas árvores binárias de busca, estudando sua implementação e uso como dicionários ordenados. 
+Em seguida, apresentamos três variantes de árvores balanceadas: 
+as árvores AVL, as árvores B (adequadas para acesso em disco) e as árvores vermelho-preto, que realizam balanceamento automático por meio de marcações nos nós.
+
+A última parte da apostila é dedicada aos grafos. 
+Apresentamos os conceitos fundamentais e representações possíveis, com exemplos de aplicações reais. 
+Estudamos algoritmos de busca em grafos, como busca em largura (BFS) e busca em profundidade (DFS), e algoritmos para cálculo de caminhos mínimos, incluindo Dijkstra e Bellman-Ford. 
+Encerramos com os algoritmos de Kruskal e Prim para obtenção de árvores geradoras mínimas, fundamentados no teorema do corte.
+
+\section*{Objetivos}
+
+O principal objetivo desta disciplina é aprofundar o conhecimento dos alunos sobre estruturas de dados e algoritmos, com foco na escolha e implementação de representações eficientes para problemas computacionais complexos. 
+Pretende-se desenvolver a capacidade de raciocínio algorítmico, aliando clareza conceitual à análise crítica de desempenho.
+
+Especificamente, ao final da disciplina, espera-se que o aluno seja capaz de:
+\begin{itemize}
+  \item Compreender e implementar estruturas de dados fundamentais como tabelas de dispersão, árvores de busca e grafos;
+  \item Avaliar a eficiência de algoritmos em diferentes contextos, utilizando ferramentas de análise assintótica;
+  \item Reconhecer padrões de problemas e selecionar estruturas e algoritmos adequados para resolvê-los;
+  \item Aplicar os conceitos estudados em implementações práticas, com ênfase na correção, clareza e desempenho do código.
+\end{itemize}
+
+\section*{Bibliografia}
+
+\begin{itemize}
+  \item Goodrich \& Tamassia. {\em Estruturas de Dados e Algoritmos em Java} (Bookman, 2007).
+  \item Sedgewick \& Wayne. {\em Algorithms, 4th Edition}.
+\end{itemize}
+

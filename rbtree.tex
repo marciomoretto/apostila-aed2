@@ -1,0 +1,571 @@
+\chapter{Árvores Vermelho-Preto}
+
+Árvores balanceadas são estruturas fundamentais para garantir eficiência em operações de busca, inserção e remoção em tempo logarítmico. 
+No capítulo anterior, estudamos as árvores B, voltadas principalmente para sistemas de armazenamento externo, como bancos de dados e sistemas de arquivos. 
+Antes delas, vimos as árvores AVL, que mantêm um balanceamento rigoroso por meio de diferenças de altura entre subárvores.
+
+As árvores vermelho-preto oferecem uma abordagem diferente: relaxam o critério de balanceamento das AVL em troca de algoritmos mais simples e eficientes para inserção e remoção. 
+Em vez de controlar diferenças de altura, usam uma coloração (vermelha ou preta) em cada nó, junto a regras que garantem que a altura da árvore permaneça proporcional a $\log n$. 
+
+Neste capítulo, estudaremos as propriedades que definem as árvores vermelho-preto, os algoritmos de inserção e remoção que mantêm essas propriedades.
+
+Uma \textbf{árvore vermelho-preto} é uma árvore binária de busca em que cada nó contém, além da chave, uma \textbf{cor}: vermelha ou preta. 
+O balanceamento da árvore é garantido por um conjunto de propriedades que limitam a forma como os nós vermelhos e pretos podem ser organizados. 
+Essas regras asseguram que a altura da árvore permaneça proporcional a $\log n$.
+
+As cinco propriedades fundamentais de uma árvore vermelho-preto são:
+
+\begin{enumerate}
+    \item \textbf{Cada nó é vermelho ou preto.} \\
+    A cor é um atributo armazenado em cada nó da árvore.
+
+    \item \textbf{A raiz é sempre preta.} \\
+    Essa regra é aplicada após cada operação que altera a árvore.
+
+    \item \textbf{Todas as folhas (nós nulos) são pretas.} \\
+    Consideramos que todas as referências nulas -- ou seja, os ponteiros para filhos inexistentes -- são nós pretos.
+
+    \item \textbf{Um nó vermelho não pode ter filhos vermelhos.} \\
+    Ou seja, dois nós vermelhos nunca aparecem consecutivamente em um caminho.
+
+    \item \textbf{Todos os caminhos de um nó até qualquer folha descendente contêm o mesmo número de nós pretos.} \\
+    Esse número é chamado de \textit{altura preta} do nó.
+\end{enumerate}
+
+Essas propriedades impõem uma estrutura que impede o crescimento exagerado da altura, mesmo sem exigir um balanceamento rígido como nas árvores AVL.
+
+\subsection*{Exemplo}
+
+A figura abaixo ilustra uma árvore vermelho-preto que satisfaz todas as propriedades:
+
+\begin{center}
+\begin{tikzpicture}[
+    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
+    level distance=1.5cm, sibling distance=3.5cm
+]
+\tikzset{
+    preto/.style={draw=black},
+    vermelho/.style={draw=red, text=red}
+}
+\node[preto] {10}
+    child {
+        node[vermelho] {5}
+        child[grow=down] { node[preto] {7} }
+    }
+    child {
+        node[vermelho] {15}
+        child { node[preto] {12} }
+        child { node[preto] {20} }
+    };
+\end{tikzpicture}
+\end{center}
+
+
+As propriedades das árvores vermelho-preto impõem restrições que evitam o crescimento descontrolado da altura da árvore, mesmo sem exigir um balanceamento tão rigoroso quanto o das árvores AVL. 
+O segredo está em como as cores limitam a estrutura dos caminhos da raiz até as folhas.
+
+A chave da análise está na \textbf{altura preta}, definida como o número de nós pretos em qualquer caminho da raiz até uma folha. 
+Pela propriedade (5), todos esses caminhos têm a mesma altura preta, digamos $bh(x)$ para um nó $x$. 
+Isso significa que os caminhos não podem variar muito em comprimento: se um caminho tivesse muitos nós vermelhos consecutivos, violaria a propriedade (4), que proíbe dois vermelhos seguidos. 
+Assim, o número de nós vermelhos em qualquer caminho é no máximo igual ao número de nós pretos.
+
+Logo, o \textbf{comprimento máximo de qualquer caminho} da raiz até uma folha é no máximo o dobro da altura preta. 
+Isso implica:
+
+\[
+\text{altura da árvore } \leq 2 \cdot bh(\text{raiz})
+\]
+
+Além disso, o número mínimo de nós em uma árvore com altura preta $bh$ ocorre quando todos os nós pretos estão intercalados com vermelhos, ou seja, com altura total $2 \cdot bh$. 
+Mostra-se por indução que uma árvore vermelho-preto com $n$ nós tem altura no máximo:
+
+\[
+\text{altura} \leq 2 \log(n + 1)
+\]
+
+Isso garante que todas as operações de inserção, remoção e busca, que percorrem a árvore do topo até uma folha, têm custo assintótico de $O(\log n)$ no pior caso, mantendo a eficiência da estrutura mesmo após várias atualizações.
+
+\section{Função {\tt inserir}}
+
+A inserção em uma árvore vermelho-preto segue duas etapas principais:
+
+\begin{enumerate}
+    \item Inserir o novo nó como em uma árvore binária de busca (ABB) comum.
+    \item Colorir o novo nó como \textbf{vermelho} e, em seguida, executar uma sequência de \textbf{recolorações} e possivelmente \textbf{rotações} para restaurar as propriedades vermelho-preto.
+\end{enumerate}
+
+Colorir o novo nó de vermelho ajuda a manter a propriedade (5) (altura preta), mas pode violar a propriedade (4) (nenhum nó vermelho pode ter filho vermelho). Para resolver essa violação, aplicamos um procedimento de correção que depende da cor do \textit{tio} do novo nó.
+
+Os principais casos de rebalanceamento são:
+
+\begin{itemize}
+    \item \textbf{Caso 1 (Tio vermelho):} recolorimos pai, tio e avô.
+
+    \begin{center}
+		\begin{tikzpicture}[
+		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
+		    level distance=1.5cm, sibling distance=2.5cm
+		]
+		\tikzset{
+		    preto/.style={draw=black},
+		    vermelho/.style={draw=red, text=red}
+		}
+		\node[preto] {A}
+		  child {
+		    node[vermelho] {B}
+		    child[grow=down] { node[vermelho] {N} } % novo nó inserido
+		  }
+		  child {
+		    node[vermelho] {C}
+		  };
+		\end{tikzpicture}
+	\end{center}
+
+	Depois da correção ficamos com:
+	
+	\begin{center}
+		\begin{tikzpicture}[
+		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
+		    level distance=1.5cm, sibling distance=2.5cm
+		]
+		\tikzset{
+		    preto/.style={draw=black},
+		    vermelho/.style={draw=red, text=red}
+		}
+		\node[vermelho] {A}
+		  child {
+		    node[preto] {B}
+		    child[grow=down] { node[vermelho] {N} }
+		  }
+		  child {
+		    node[preto] {C}
+		  };
+		\end{tikzpicture}
+	\end{center}
+
+
+    \item \textbf{Caso 2 (Tio preto e filho em zig-zag):} rotação simples para transformar em Caso 3.
+
+	\begin{center}
+		\begin{tikzpicture}[
+		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
+		    level distance=1.5cm, sibling distance=2.5cm
+		]
+		\tikzset{
+		    preto/.style={draw=black},
+		    vermelho/.style={draw=red, text=red}
+		}
+		\node[preto] {A}
+		  child {
+		    node[preto] {C}
+		  }
+		  child {
+		    node[vermelho] {B}
+		    child {
+		        node[vermelho] {N}
+		    }
+		    child[missing]
+		  };
+		\end{tikzpicture}
+	\end{center}
+
+	Depois do rebalanceamento ficamos com:
+	
+	\begin{center}
+		\begin{tikzpicture}[
+		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
+		    level distance=1.5cm, sibling distance=2.5cm
+		]
+		\tikzset{
+		    preto/.style={draw=black},
+		    vermelho/.style={draw=red, text=red}
+		}
+		\node[preto] {A}
+		  child {
+		    node[preto] {C}
+		  }
+		  child {
+		    node[vermelho] {N}
+		    child[missing]
+		    child {
+		        node[vermelho] {B}
+		    }
+		  };
+		\end{tikzpicture}
+	\end{center}
+
+
+
+    \item \textbf{Caso 3 (Tio preto e filho em linha):} rotação e recoloração.
+
+    \begin{center}
+		\begin{tikzpicture}[
+		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
+		    level distance=1.5cm, sibling distance=2.5cm
+		]
+		\tikzset{
+		    preto/.style={draw=black},
+		    vermelho/.style={draw=red, text=red}
+		}
+		\node[preto] {A}
+		  child {
+		    node[preto] {C}
+		  }
+		  child {
+		    node[vermelho] {B}
+		    child[missing]
+		    child {
+		        node[vermelho] {N}
+		    }
+		  };
+		\end{tikzpicture}
+	\end{center}
+
+	Depois do rebalanceamento ficamos com:
+
+	\begin{center}
+		\begin{tikzpicture}[
+		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
+		    level distance=1.5cm, sibling distance=2.5cm
+		]
+		\tikzset{
+		    preto/.style={draw=black},
+		    vermelho/.style={draw=red, text=red}
+		}
+		\node[preto] {B}
+		  child {
+		    node[vermelho] {A}
+		    child { node[preto] {C} }
+		    child[missing]
+		  }
+		  child {
+		    node[vermelho] {N}
+		  };
+		\end{tikzpicture}
+	\end{center}
+
+\end{itemize}
+
+
+A seguir, um esboço da função de inserção com chamada à função de correção:
+
+\begin{lstlisting}[language=C, caption={Inserção em árvore vermelho-preto (esboço)}, label=lst:insercao_rb]
+typedef enum { VERMELHO, PRETO } Cor;
+
+typedef struct No {
+    int chave;
+    Cor cor;
+    struct No *esq, *dir, *pai;
+} No;
+
+void inserir(No **raiz, int chave) {
+    No *novo = criar_no(chave, VERMELHO);
+    inserir_abb(raiz, novo);
+    corrigir_insercao(raiz, novo);
+}
+\end{lstlisting}
+
+A função \texttt{corrigir\_insercao} é responsável por garantir que as propriedades da árvore vermelho-preto sejam restauradas após a inserção.
+
+\begin{lstlisting}[language=C, caption={Correção após inserção em árvore vermelho-preto}, label=lst:corrigir_insercao]
+void corrigir_insercao(No **raiz, No *n) {
+    while (n != *raiz && n->pai->cor == VERMELHO) {
+        No *pai = n->pai;
+        No *avo = pai->pai;
+
+        if (pai == avo->esq) {
+            No *tio = avo->dir;
+
+            if (tio && tio->cor == VERMELHO) {
+                // Caso 1: tio vermelho
+                pai->cor = PRETO;
+                tio->cor = PRETO;
+                avo->cor = VERMELHO;
+                n = avo; // sobe para verificar novo conflito
+            } else {
+                if (n == pai->dir) {
+                    // Caso 2: zig-zag
+                    n = pai;
+                    rotacao_esquerda(raiz, n);
+                }
+                // Caso 3: linha reta
+                pai = n->pai;
+                avo = pai->pai;
+                pai->cor = PRETO;
+                avo->cor = VERMELHO;
+                rotacao_direita(raiz, avo);
+            }
+        } else {
+            // simétrico: pai está à direita
+            No *tio = avo->esq;
+
+            if (tio && tio->cor == VERMELHO) {
+                // Caso 1 (simétrico)
+                pai->cor = PRETO;
+                tio->cor = PRETO;
+                avo->cor = VERMELHO;
+                n = avo;
+            } else {
+                if (n == pai->esq) {
+                    // Caso 2 (simétrico)
+                    n = pai;
+                    rotacao_direita(raiz, n);
+                }
+                // Caso 3 (simétrico)
+                pai = n->pai;
+                avo = pai->pai;
+                pai->cor = PRETO;
+                avo->cor = VERMELHO;
+                rotacao_esquerda(raiz, avo);
+            }
+        }
+    }
+
+    (*raiz)->cor = PRETO;
+}
+\end{lstlisting}
+
+\section{Função {\tt remover}}
+
+A operação de remoção em árvores vermelho-preto segue a mesma ideia geral da remoção em árvores binárias de busca (ABB):
+
+\begin{enumerate}
+    \item Localizamos o nó a ser removido.
+    \item Se ele tiver dois filhos, substituímos seu valor pelo de seu sucessor imediato (ou antecessor) e então removemos esse sucessor, que terá no máximo um filho.
+    \item O nó removido de fato terá, portanto, no máximo um filho (como em uma ABB).
+\end{enumerate}
+
+No entanto, como as cores dos nós afetam diretamente as propriedades da árvore, a remoção pode gerar violações nas propriedades vermelho-preto, principalmente a da altura preta. 
+Isso acontece especialmente quando se remove um nó preto.
+
+Para lidar com essas violações, introduzimos o conceito de {\em nó duplamente preto}, que aparece temporariamente durante o processo de correção. 
+Ele representa um déficit de cor e será tratado com rotações e recolorações, até que todas as propriedades sejam restauradas.
+
+Abaixo está um esboço da função de remoção, com chamada a uma função de correção:
+
+\begin{lstlisting}[language=C, caption={Remoção em árvore vermelho-preto}, label=lst:remocao_rb]
+void remover(No **raiz, int chave) {
+    No *n = buscar(*raiz, chave);
+    if (n == NULL) return;
+
+    No *substituto = n;
+    Cor cor_original = substituto->cor;
+
+    No *x; // nó que sobe (pode ser nulo)
+
+    if (n->esq == NULL) {
+        x = n->dir;
+        transplantar(raiz, n, n->dir);
+    } else if (n->dir == NULL) {
+        x = n->esq;
+        transplantar(raiz, n, n->esq);
+    } else {
+        substituto = minimo(n->dir);
+        cor_original = substituto->cor;
+        x = substituto->dir;
+
+        if (substituto->pai == n) {
+            if (x) x->pai = substituto;
+        } else {
+            transplantar(raiz, substituto, substituto->dir);
+            substituto->dir = n->dir;
+            substituto->dir->pai = substituto;
+        }
+
+        transplantar(raiz, n, substituto);
+        substituto->esq = n->esq;
+        substituto->esq->pai = substituto;
+        substituto->cor = n->cor;
+    }
+
+    if (cor_original == PRETO)
+        corrigir_remocao(raiz, x);
+}
+\end{lstlisting}
+
+A função auxiliar \texttt{corrigir\_remocao} é responsável por eliminar o nó duplamente preto que pode surgir após a remoção de um nó preto.
+
+Durante a correção, tratamos uma série de casos que dependem da cor do irmão do nó duplamente preto e de seus filhos:
+
+\begin{itemize}
+    \item \textbf{Caso 1:} irmão vermelho
+	\begin{center}
+		\begin{tikzpicture}[
+		  level distance=1.2cm,
+		  level 1/.style={sibling distance=3.5cm},
+		  level 2/.style={sibling distance=2cm},
+		  every node/.style={font=\small}
+		]
+
+		\tikzset{
+		    preto/.style={draw=black, circle, minimum size=8mm, inner sep=1pt},
+		    vermelho/.style={draw=red, text=red, draw=red, circle, minimum size=8mm, inner sep=1pt},
+		    duplo/.style={draw=black, double distance=1pt, circle, minimum size=8mm, inner sep=1pt}
+		}
+
+		% Antes da correção
+		\node at (-5,0) {Antes da correção:};
+
+		\node[preto] (P) at (-5,-1) {P}
+		  child { node[duplo] {X} }
+		  child { node[vermelho] (S) {S}
+		    child { node[preto] {SL} }
+		    child { node[preto] {SR} }
+		  };
+
+		% Seta de transformação
+		\draw[->, thick] (-2,-1) -- (-1,-1) node[midway, above] {rotação e recoloração};
+
+		% Depois da correção
+		\node at (3,0) {Depois da correção:};
+
+		\node[preto] (S2) at (3,-1) {S}
+		  child { node[vermelho] (P2) {P}
+		    child { node[preto] {X} }
+		    child { node[preto] {SL} }
+		  }
+		  child { node[preto] {SR} };
+
+		\end{tikzpicture}
+	\end{center}
+
+
+
+
+    \item \textbf{Caso 2:} irmão preto com filhos pretos
+
+	\begin{center}
+		\begin{tikzpicture}[
+		  level distance=1.2cm,
+		  level 1/.style={sibling distance=3.5cm},
+		  level 2/.style={sibling distance=2cm},
+		  every node/.style={font=\small}
+		]
+
+		\tikzset{
+		    preto/.style={draw=black, circle, minimum size=8mm, inner sep=1pt},
+		    vermelho/.style={draw=red, text=red, draw=red, circle, minimum size=8mm, inner sep=1pt},
+		    duplo/.style={draw=black, double distance=1pt, circle, minimum size=8mm, inner sep=1pt}
+		}
+
+		% Antes da correção
+		\node at (-5,0) {Antes da correção:};
+
+		\node[preto] (P) at (-5,-1) {P}
+		  child { node[duplo] {X} }
+		  child { node[preto] (S) {S}
+		    child { node[preto] {SL} }
+		    child { node[preto] {SR} }
+		  };
+
+		% Seta de transformação
+		\draw[->, thick] (-2,-1) -- (-1,-1) node[midway, above] {recoloração};
+
+		% Depois da correção
+		\node at (3,0) {Depois da correção:};
+
+		\node[preto] (P2) at (3,-1) {P}
+		  child { node[preto] {X} }
+		  child { node[vermelho] (S2) {S}
+		    child { node[preto] {SL} }
+		    child { node[preto] {SR} }
+		  };
+
+		\end{tikzpicture}
+	\end{center}
+
+
+    \item \textbf{Caso 3:} irmão preto com filho vermelho longe
+    \begin{center}
+		\begin{tikzpicture}[
+		  level distance=1.2cm,
+		  level 1/.style={sibling distance=3.5cm},
+		  level 2/.style={sibling distance=2cm},
+		  every node/.style={font=\small}
+		]
+
+		\tikzset{
+		    preto/.style={draw=black, circle, minimum size=8mm, inner sep=1pt},
+		    vermelho/.style={draw=red, text=red, draw=red, circle, minimum size=8mm, inner sep=1pt},
+		    duplo/.style={draw=black, double distance=1pt, circle, minimum size=8mm, inner sep=1pt}
+		}
+
+		% Antes da correção
+		\node at (-5,0) {Antes da correção:};
+
+		\node[vermelho] (P) at (-5,-1) {P}
+		  child { node[duplo] {X} }
+		  child { node[preto] (S) {S}
+		    child { node[preto] {SL} }
+		    child { node[vermelho] {SR} }
+		  };
+
+		% seta
+		\draw[->, thick] (-2,-1) -- (-1,-1) node[midway, above] {rotação e recoloração};
+
+		% Depois da correção
+		\node at (3,0) {Depois da correção:};
+
+		\node[preto] (S2) at (3,-1) {S}
+		  child {
+		    node[vermelho] {P}
+		    child { node[preto] {X} }
+		    child { node[preto] {SL} }
+		  }
+		  child {
+		    node[preto] {SR}
+		  };
+
+		\end{tikzpicture}
+	\end{center}
+
+    \item \textbf{Caso 4:} irmão preto com filho vermelho próximo
+
+    \begin{center}
+		\begin{tikzpicture}[
+		  level distance=1.2cm,
+		  level 1/.style={sibling distance=3.5cm},
+		  level 2/.style={sibling distance=2cm},
+		  every node/.style={font=\small}
+		]
+
+		\tikzset{
+		    preto/.style={draw=black, circle, minimum size=8mm, inner sep=1pt},
+		    vermelho/.style={draw=red, text=red, draw=red, circle, minimum size=8mm, inner sep=1pt},
+		    duplo/.style={draw=black, double distance=1pt, circle, minimum size=8mm, inner sep=1pt}
+		}
+
+		% Antes da correção
+		\node at (-5,0) {Antes da correção:};
+
+		\node[preto] (P) at (-5,-1) {P}
+		  child { node[duplo] {X} }
+		  child { node[preto] (S) {S}
+		    child { node[vermelho] (SL) {SL} }
+		    child { node[preto] {SR} }
+		  };
+
+		% seta
+		\draw[->, thick] (-2,-1) -- (-1,-1) node[midway, above] {rotação e troca de cores};
+
+		% Depois da correção
+		\node at (3,0) {Depois da correção:};
+
+		\node[preto] (P2) at (3,-1) {P}
+		  child { node[duplo] {X} }
+		  child { node[vermelho] (SL2) {SL}
+		    child { node[preto] {} }
+		    child { node[preto] {S}
+		      child { node[preto] {} }
+		      child { node[preto] {SR} }
+		    }
+		  };
+
+		\end{tikzpicture}
+	\end{center}
+
+\end{itemize}
+
+Cada um desses casos requer uma combinação específica de rotações e recolorações. 
+A complexidade da remoção é maior do que a da inserção, mas a altura da árvore continua limitada por $2\log(n+1)$, e todas as operações mantêm custo assintótico de $O(\log n)$.
+

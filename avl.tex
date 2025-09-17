@@ -1,0 +1,456 @@
+\chapter{Árvores AVL}
+
+Árvores binárias de busca (ABBs) são estruturas eficientes para armazenar dados ordenados, permitindo operações como busca, inserção e remoção em tempo proporcional à altura da árvore. 
+Quando essa altura é pequena -- idealmente $\Theta(\lg(n))$ -- essas operações são rápidas. 
+No entanto, a eficiência das ABBs depende diretamente de sua forma estrutural.
+
+Em muitas situações práticas, a árvore pode crescer de forma desbalanceada. 
+Isso ocorre, por exemplo, quando os dados são inseridos em ordem crescente ou decrescente -- casos extremos em que a ABB assume a forma de uma lista encadeada. 
+Mas o problema não se limita a esses cenários: mesmo inserções em ordens menos regulares podem causar ramificações assimétricas, resultando em árvores com altura muito maior do que o necessário.
+
+À medida que a altura cresce, o custo das operações também cresce. 
+Uma ABB desbalanceada pode atingir altura linear no pior caso, tornando todas as operações proporcionalmente mais lentas -- de tempo logarítmico para tempo linear.
+
+Para evitar essa degradação, surgem as chamadas \textit{árvores balanceadas}, que reorganizam sua estrutura a cada inserção ou remoção para manter a altura sob controle. O balanceamento visa preservar o desempenho logarítmico, limitando o crescimento desproporcional dos ramos. 
+A árvore AVL, uma das primeiras estruturas desse tipo, impõe regras rígidas sobre o equilíbrio entre os ramos esquerdo e direito de cada nó, garantindo uma altura sempre próxima ao ideal.
+
+Uma \textit{árvore AVL} é uma árvore binária de busca que mantém uma propriedade de balanceamento estrito: para todo nó da árvore, a diferença entre as alturas das subárvores esquerda e direita deve ser, no máximo, 1. 
+Essa diferença é chamada de \textbf{fator de balanceamento} do nó.
+
+Formalmente, seja $h_e$ a altura da subárvore esquerda de um nó e $h_d$ a altura da subárvore direita. 
+A árvore é dita balanceada nesse nó se:
+
+\[
+|h_e - h_d| \leq 1
+\]
+
+Se essa condição for violada após uma operação de inserção ou remoção, a árvore executa uma ou mais rotações locais para restaurar o equilíbrio.
+
+Esse critério local garante que a altura total da árvore permaneça $\Theta(\lg n)$, o que assegura que as operações de busca, inserção e remoção mantenham complexidade eficiente, mesmo no pior caso.
+
+A estrutura foi proposta em 1962 pelos matemáticos soviéticos \textbf{Georgy Adelson-Velsky} e \textbf{Evgenii Landis}, cujos sobrenomes deram origem à sigla \textbf{AVL}. 
+Foi a primeira árvore binária de busca com balanceamento automático proposta na literatura, e estabeleceu as bases para várias outras estruturas balanceadas utilizadas em algoritmos e sistemas de dados.
+
+O \textbf{fator de balanceamento} de um nó em uma árvore AVL é definido como a diferença entre as alturas das subárvores esquerda e direita. 
+Seja $h_e$ a altura da subárvore esquerda e $h_d$ a altura da subárvore direita de um nó. 
+O fator de balanceamento $f$ é dado por:
+
+\[
+f = h_e - h_d
+\]
+
+Um nó está balanceado se $|f| \leq 1$. 
+Se essa condição for violada após uma operação de inserção ou remoção -- isto é, se $f < -1$ ou $f > 1$ -- o nó está desbalanceado e a árvore precisa ser reestruturada.
+
+O valor de $f$ é utilizado para determinar qual tipo de rotação é necessária para restaurar o equilíbrio da árvore. 
+Os casos mais comuns são:
+
+\begin{itemize}
+    \item $f = 2$ e o fator do filho esquerdo $> 0$: rotação simples à direita.
+    \item $f = 2$ e o fator do filho esquerdo $< 0$: rotação dupla esquerda-direita.
+    \item $f = -2$ e o fator do filho direito $< 0$: rotação simples à esquerda.
+    \item $f = -2$ e o fator do filho direito $> 0$: rotação dupla direita-esquerda.
+\end{itemize}
+
+Essas rotações locais garantem que a altura da árvore permaneça próxima de $\log n$, mesmo após modificações que causariam desequilíbrio.
+
+
+\section{Rotações}
+
+Quando uma inserção ou remoção causa desequilíbrio em um nó — isto é, quando $|h_e - h_d| > 1$ — a árvore AVL realiza rotações locais para restaurar o equilíbrio. As rotações ajustam a estrutura da árvore sem violar a propriedade de ordem da árvore binária de busca.
+
+\subsection*{Rotação simples à direita}
+
+Esse tipo de rotação é usado quando o desequilíbrio ocorre na subárvore esquerda de um nó, e essa subárvore também tem seu maior peso à esquerda. Isso ocorre, por exemplo, após a inserção em uma subárvore esquerda-esquerda.
+
+\begin{center}
+\begin{tikzpicture}[level distance=1.2cm,
+  level 1/.style={sibling distance=3.5cm},
+  level 2/.style={sibling distance=2cm}]
+
+% Árvore antes
+\node at (-5,0) {Antes da rotação:};
+
+\node (A) at (-5,-1) {A}
+  child {node (B) {B}
+    child {node {C}}
+    child [missing]
+  }
+  child [missing];
+
+% seta
+\draw[->, thick] (-2.5,-1) -- (-1.5,-1) node[midway, above] {rotação};
+
+% Árvore depois
+\node at (1,0) {Depois da rotação:};
+
+\node (B2) at (1,-1) {B}
+  child {node {C}}
+  child {node (A2) {A}};
+
+\end{tikzpicture}
+\end{center}
+
+
+\subsection*{Rotação simples à esquerda}
+
+A rotação simples à esquerda é simétrica à rotação simples à direita, e ocorre quando o desequilíbrio está à direita de um nó, com o ramo mais pesado também à direita (caso direita-direita).
+
+\begin{center}
+\begin{tikzpicture}[level distance=1.2cm,
+  level 1/.style={sibling distance=3.5cm},
+  level 2/.style={sibling distance=2cm}]
+
+% Árvore antes
+\node at (-5,0) {Antes da rotação:};
+
+\node (A) at (-5,-1) {A}
+  child [missing]
+  child {node (B) {B}
+    child [missing]
+    child {node {C}}
+  };
+
+% seta
+\draw[->, thick] (-2.5,-1) -- (-1.5,-1) node[midway, above] {rotação};
+
+% Árvore depois
+\node at (1,0) {Depois da rotação:};
+
+\node (B2) at (1,-1) {B}
+  child {node (A2) {A}}
+  child {node {C}};
+
+\end{tikzpicture}
+\end{center}
+
+\subsection*{Rotação dupla esquerda-direita}
+
+Esse tipo de rotação é necessário quando o desequilíbrio ocorre na subárvore esquerda de um nó, mas o maior peso está à direita dessa subárvore. É o caso típico após inserção em uma subárvore esquerda-direita. A correção envolve duas rotações: uma rotação simples à esquerda no filho esquerdo, seguida de uma rotação simples à direita no nó desbalanceado.
+
+\begin{center}
+\begin{tikzpicture}[level distance=1.2cm,
+  level 1/.style={sibling distance=3.5cm},
+  level 2/.style={sibling distance=2cm}]
+
+% Árvore antes
+\node at (-6,0) {Antes da rotação:};
+
+\node (A) at (-6,-1) {A}
+  child {node (B) {B}
+    child [missing]
+    child {node {C}}
+  }
+  child [missing];
+
+% seta
+\draw[->, thick] (-3,-1) -- (-2,-1) node[midway, above] {rotações};
+
+% Árvore depois
+\node at (2,0) {Depois da rotação:};
+
+\node (C2) at (2,-1) {C}
+  child {node (B2) {B}}
+  child {node (A2) {A}};
+
+\end{tikzpicture}
+\end{center}
+
+
+\subsection*{Rotação dupla direita-esquerda}
+
+Esse tipo de rotação ocorre quando o desequilíbrio está na subárvore direita de um nó, mas o maior peso está à esquerda dessa subárvore. É o caso típico após inserção em uma subárvore direita-esquerda. A correção envolve duas rotações: uma rotação simples à direita no filho direito, seguida de uma rotação simples à esquerda no nó desbalanceado.
+
+\begin{center}
+\begin{tikzpicture}[level distance=1.2cm,
+  level 1/.style={sibling distance=3.5cm},
+  level 2/.style={sibling distance=2cm}]
+
+% Árvore antes
+\node at (-6,0) {Antes da rotação:};
+
+\node (A) at (-6,-1) {A}
+  child [missing]
+  child {node (C) {C}
+    child {node {B}}
+    child [missing]
+  };
+
+% seta
+\draw[->, thick] (-3,-1) -- (-2,-1) node[midway, above] {rotações};
+
+% Árvore depois
+\node at (2,0) {Depois da rotação:};
+
+\node (B2) at (2,-1) {B}
+  child {node (A2) {A}}
+  child {node (C2) {C}};
+
+\end{tikzpicture}
+\end{center}
+
+\section*{Função {\tt inserir}}
+
+Antes de apresentar a inserção em uma árvore AVL, definimos três funções auxiliares essenciais para manter a propriedade de balanceamento da estrutura.
+
+A função \texttt{altura} retorna a altura de um nó, considerando que um nó nulo tem altura $-1$:
+
+\begin{lstlisting}
+int altura(Node* n) {
+    if (n == NULL)
+        return -1;
+    return n->altura;
+}
+\end{lstlisting}
+
+A função \texttt{fatorBalanceamento} calcula a diferença entre as alturas das subárvores esquerda e direita de um nó:
+
+\begin{lstlisting}
+int fatorBalanceamento(Node* n) {
+    if (n == NULL)
+        return 0;
+    return altura(n->esq) - altura(n->dir);
+}
+\end{lstlisting}
+
+A função \texttt{max} retorna o maior entre dois inteiros:
+
+\begin{lstlisting}
+int max(int a, int b) {
+    return (a > b) ? a : b;
+}
+\end{lstlisting}
+
+A função \texttt{atualizarAltura} deve ser chamada sempre que a estrutura da árvore for modificada. 
+Ela atualiza a altura de um nó com base nas alturas de seus filhos:
+
+\begin{lstlisting}
+void atualizarAltura(Node* n) {
+    n->altura = 1 + max(altura(n->esq), altura(n->dir));
+}
+\end{lstlisting}
+
+As rotações são operações locais que reestruturam a árvore para restaurar o balanceamento, mantendo a propriedade de ordem da árvore binária de busca.
+
+\begin{lstlisting}
+Node* rotacaoDireita(Node* y) {
+    Node* x = y->esq;
+    Node* T2 = x->dir;
+
+    // Rotação
+    x->dir = y;
+    y->esq = T2;
+
+    // Atualiza alturas
+    atualizarAltura(y);
+    atualizarAltura(x);
+
+    return x;
+}
+\end{lstlisting}
+
+\begin{lstlisting}
+Node* rotacaoEsquerda(Node* x) {
+    Node* y = x->dir;
+    Node* T2 = y->esq;
+
+    // Rotação
+    y->esq = x;
+    x->dir = T2;
+
+    // Atualiza alturas
+    atualizarAltura(x);
+    atualizarAltura(y);
+
+    return y;
+}
+\end{lstlisting}
+
+
+A operação de inserção em uma árvore AVL segue o mesmo princípio da inserção em uma árvore binária de busca, mas com um passo adicional: após a inserção, é necessário verificar se houve desequilíbrio e aplicar rotações se necessário. 
+A função abaixo insere uma nova chave e reequilibra a árvore:
+
+\begin{lstlisting}
+Node* inserir(Node* raiz, int chave) {
+    if (raiz == NULL)
+        return novoNo(chave);
+
+    if (chave < raiz->chave)
+        raiz->esq = inserir(raiz->esq, chave);
+    else if (chave > raiz->chave)
+        raiz->dir = inserir(raiz->dir, chave);
+    else
+        return raiz; // chaves duplicadas não são permitidas
+
+    atualizarAltura(raiz);
+
+    int fb = fatorBalanceamento(raiz);
+
+    // Caso esquerda-esquerda
+    if (fb > 1 && chave < raiz->esq->chave)
+        return rotacaoDireita(raiz);
+
+    // Caso direita-direita
+    if (fb < -1 && chave > raiz->dir->chave)
+        return rotacaoEsquerda(raiz);
+
+    // Caso esquerda-direita
+    if (fb > 1 && chave > raiz->esq->chave) {
+        raiz->esq = rotacaoEsquerda(raiz->esq);
+        return rotacaoDireita(raiz);
+    }
+
+    // Caso direita-esquerda
+    if (fb < -1 && chave < raiz->dir->chave) {
+        raiz->dir = rotacaoDireita(raiz->dir);
+        return rotacaoEsquerda(raiz);
+    }
+
+    return raiz;
+}
+\end{lstlisting}
+
+\section*{Função {\tt remover}}
+
+A operação de remoção em uma árvore AVL começa como em uma árvore binária de busca: localiza-se o nó com a chave a ser removida, e aplica-se uma das três regras usuais:
+
+\begin{itemize}
+    \item Se o nó é uma folha, ele é simplesmente removido.
+    \item Se tem apenas um filho, substitui-se o nó pelo filho.
+    \item Se tem dois filhos, substitui-se o valor pela menor chave da subárvore direita (ou maior da esquerda), e remove-se esse sucessor recursivamente.
+\end{itemize}
+
+Após a remoção, a árvore pode ficar desbalanceada em vários nós no caminho de volta da recursão. 
+Para cada nó, atualizamos a altura e aplicamos rotações se necessário.
+
+\begin{lstlisting}
+Node* remover(Node* raiz, int chave) {
+    if (raiz == NULL)
+        return NULL;
+
+    if (chave < raiz->chave)
+        raiz->esq = remover(raiz->esq, chave);
+    else if (chave > raiz->chave)
+        raiz->dir = remover(raiz->dir, chave);
+    else {
+        // Caso com 0 ou 1 filho
+        if (raiz->esq == NULL || raiz->dir == NULL) {
+            Node* temp = raiz->esq ? raiz->esq : raiz->dir;
+            free(raiz);
+            return temp;
+        }
+
+        // Caso com 2 filhos: substitui pelo menor da direita
+        Node* temp = minimo(raiz->dir);
+        raiz->chave = temp->chave;
+        raiz->dir = remover(raiz->dir, temp->chave);
+    }
+
+    atualizarAltura(raiz);
+    int fb = fatorBalanceamento(raiz);
+
+    // Rebalanceamento
+
+    // Caso esquerda-esquerda
+    if (fb > 1 && fatorBalanceamento(raiz->esq) >= 0)
+        return rotacaoDireita(raiz);
+
+    // Caso esquerda-direita
+    if (fb > 1 && fatorBalanceamento(raiz->esq) < 0) {
+        raiz->esq = rotacaoEsquerda(raiz->esq);
+        return rotacaoDireita(raiz);
+    }
+
+    // Caso direita-direita
+    if (fb < -1 && fatorBalanceamento(raiz->dir) <= 0)
+        return rotacaoEsquerda(raiz);
+
+    // Caso direita-esquerda
+    if (fb < -1 && fatorBalanceamento(raiz->dir) > 0) {
+        raiz->dir = rotacaoDireita(raiz->dir);
+        return rotacaoEsquerda(raiz);
+    }
+
+    return raiz;
+}
+\end{lstlisting}
+
+A função \texttt{minimo} retorna o ponteiro para o nó com a menor chave em uma árvore, ou seja, o mais à esquerda.
+
+\begin{lstlisting}
+Node* minimo(Node* n) {
+    while (n->esq != NULL)
+        n = n->esq;
+    return n;
+}
+\end{lstlisting}
+
+Mesmo com o custo adicional de rotações, a remoção em uma árvore AVL continua com complexidade $O(\log n)$ no pior caso.
+
+Como exemplo ilustrativo, considere a remoção do valor \texttt{10} em uma árvore AVL. 
+O nó a ser removido possui dois filhos, o que exige que seja substituído por seu sucessor -- isto é, o menor elemento da subárvore direita, neste caso o nó \texttt{15}. 
+Após a substituição, o nó \texttt{15} original é removido, e a árvore pode ficar desbalanceada, exigindo atualizações de altura e, se necessário, rotações. O diagrama a seguir mostra a árvore antes e depois da operação de remoção:
+
+\begin{center}
+\begin{tikzpicture}[level distance=1.2cm,
+  level 1/.style={sibling distance=3.5cm},
+  level 2/.style={sibling distance=2cm},
+  every node/.style={font=\small}]
+
+% Antes da remoção
+\node at (-5,0) {Antes da remoção:};
+
+\node (n10) at (-5,-1) {10}
+  child {node {5}}
+  child {node (n15) {15}
+    child {node {12}}
+    child {node {18}}
+  };
+
+% seta
+\draw[->, thick] (-2,-1) -- (-1,-1) node[midway, above] {remoção};
+
+% Depois da remoção
+\node at (3,0) {Depois da remoção:};
+
+\node (n15b) at (3,-1) {15}
+  child {node {5}}
+  child {node (n18) {18}
+    child {node {12}}
+    child [missing]
+  };
+
+\end{tikzpicture}
+\end{center}
+
+
+\section{Análise de Complexidade}
+
+As árvores AVL mantêm a altura controlada por meio de um critério estrito de balanceamento, garantindo complexidade eficiente para todas as operações fundamentais.
+
+Uma árvore AVL com $n$ nós tem altura $\Theta(\log n)$. 
+Isso se deve ao fato de que, a cada nó, a diferença de altura entre as subárvores esquerda e direita é no máximo 1. 
+Pode-se demonstrar, por indução, que a altura $h(n)$ de uma árvore AVL com $n$ nós satisfaz a desigualdade:
+
+\[
+h(n) \leq c \cdot \log_2(n + 1)
+\]
+
+para alguma constante $c$. 
+Assim, as operações de busca, inserção e remoção têm complexidade assintótica proporcional à altura da árvore, isto é, $O(\log n)$.
+
+As rotações são operações locais, que envolvem um número constante de atualizações de ponteiros e alturas. 
+Cada rotação simples (à esquerda ou à direita) custa $O(1)$, e o mesmo vale para rotações duplas (compostas por duas rotações simples consecutivas). 
+Assim, mesmo quando ocorrem, as rotações não aumentam a complexidade assintótica das operações principais.
+
+A operação de inserção em uma árvore AVL realiza, no pior caso, um número proporcional a $\log n$ de chamadas recursivas, correspondente à altura da árvore. 
+No entanto, o rebalanceamento necessário após a inserção afeta apenas o primeiro nó do caminho de volta cuja propriedade de balanceamento foi violada. 
+Após aplicar a rotação apropriada nesse ponto -- seja simples ou dupla -- o equilíbrio é restaurado localmente, e os demais nós ancestrais não precisam de novas rotações, apenas de atualizações de altura.
+
+Essa característica é uma consequência direta da estrutura da árvore AVL: como a inserção só aumenta a altura de uma subárvore em no máximo 1, e a rotação corrige esse crescimento excessivo, não é necessário propagar rotações por todo o caminho até a raiz. 
+Portanto, embora o caminho de subida possa envolver até $O(\log n)$ atualizações de altura, apenas uma rotação (ou, no máximo, uma reestruturação composta por duas rotações simples) é realizada.
+
+Assim, o custo total da inserção permanece $O(\log n)$ no pior caso, e o custo amortizado das rotações é constante.
+
+A operação de remoção, no entanto, pode provocar desequilíbrios em múltiplos nós até a raiz. 
+Ainda assim, o número total de rotações é limitado por $O(\log n)$, o que mantém o custo amortizado da remoção dentro da mesma ordem de complexidade.

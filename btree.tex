@@ -1,0 +1,833 @@
+\chapter{Árvores B}
+
+Árvores B são estruturas de dados projetadas especificamente para contextos em que o custo do acesso à \textbf{memória externa} -- como discos rígidos ou SSDs -- é o principal gargalo de desempenho. 
+Isso ocorre, por exemplo, em sistemas de arquivos, bancos de dados e outras aplicações que manipulam grandes volumes de dados que não cabem inteiramente na memória principal. 
+Nesses casos, é essencial reduzir ao máximo a quantidade de acessos a disco, que são várias ordens de magnitude mais lentos do que os acessos à RAM.
+
+Estruturas tradicionais como árvores binárias de busca balanceadas oferecem bom desempenho em memória, com altura proporcional a $\log n$, mas ainda exigem múltiplos acessos a diferentes blocos de disco: um para cada nível da árvore. 
+Árvores B foram concebidas para esse cenário. 
+Ao permitir que cada nó armazene várias chaves e tenha muitos filhos, elas reduzem a altura da árvore de $\log_2 n$ para $\log_t n$, com $t \gg 2$, o que diminui drasticamente o número de acessos à memória secundária necessários para localizar uma chave.
+
+As \textbf{árvores B} são estruturas balanceadas que mantêm os dados ordenados e permitem operações eficientes de busca, inserção e remoção, mesmo em situações em que os dados estão distribuídos por centenas ou milhares de blocos de disco. 
+Uma das características mais importantes dessas árvores é que cada nó pode conter várias chaves e ter múltiplos filhos, o que permite manter a altura da árvore pequena mesmo com um número muito grande de elementos.
+
+Enquanto uma árvore binária de busca (ABB) tem no máximo dois filhos por nó e mantém uma única chave em cada nó, uma árvore B pode ter dezenas ou centenas de filhos por nó e armazenar múltiplas chaves. 
+Isso permite que:
+\begin{itemize}
+\item A altura da árvore seja muito menor
+\item A quantidade de acessos à memória externa seja reduzida
+\item A inserção e remoção sejam feitas de forma eficiente mesmo em grandes volumes de dados
+\end{itemize}
+
+Além disso, ao contrário de árvores como as AVL, que focam em manter o tempo de operação em $O(\log n)$ com reestruturações locais, as árvores B são projetadas para alinhar sua estrutura à lógica de acesso por blocos, típica de discos e SSDs. 
+
+A definição de uma árvore B depende de um parâmetro chamado \textit{grau mínimo}, denotado por $t$, com $t \geq 2$. 
+Esse parâmetro determina os limites inferior e superior para o número de chaves que um nó pode armazenar. 
+Cada nó da árvore (exceto a raiz) deve conter no mínimo $t - 1$ e no máximo $2t - 1$ chaves. 
+Consequentemente, o número de filhos de um nó com $k$ chaves é $k + 1$, o que significa que cada nó interno pode ter entre $t$ e $2t$ filhos. 
+A raiz é uma exceção: ela pode ter menos de $t - 1$ chaves (inclusive zero, no caso de uma árvore vazia).
+
+As chaves em cada nó estão armazenadas em ordem crescente. 
+Cada filho intercalado entre as chaves define um intervalo: o primeiro filho contém apenas chaves menores que a primeira chave do nó, o segundo filho contém chaves entre a primeira e a segunda chave, e assim por diante, até o último filho, que contém apenas chaves maiores que a última chave do nó.
+
+Há dois tipos de nós em uma árvore B: os nós internos e as folhas. 
+Os {\em nós internos} possuem filhos e organizam a estrutura da árvore; {\em as folhas}, por sua vez, não possuem filhos e armazenam apenas as chaves. 
+Uma propriedade essencial das árvores B é que todas as folhas estão no mesmo nível, o que garante que a árvore seja perfeitamente balanceada -- todos os caminhos da raiz até as folhas têm o mesmo comprimento.
+
+Essas regras garantem que a altura da árvore B cresça de forma lenta mesmo com um número muito grande de elementos. 
+Como consequência, operações de busca, inserção e remoção mantêm complexidade logarítmica, mas com uma base maior no logaritmo, o que resulta em menos acessos a disco e melhor desempenho em sistemas com memória externa.
+
+\section{Estrutura}
+
+Cada nó em uma árvore B armazena um conjunto de chaves ordenadas e ponteiros para seus filhos. 
+A estrutura de um nó com \( k \) chaves é composta por:
+
+\begin{itemize}
+  \item Um vetor de chaves ordenadas: \( k_1 < k_2 < \dots < k_k \)
+  \item Um vetor de ponteiros para filhos: \( c_0, c_1, \dots, c_k \)
+\end{itemize}
+
+Cada ponteiro \( c_i \) aponta para uma subárvore que contém apenas chaves dentro de um intervalo bem definido:
+\[
+\text{Todas as chaves em } c_0 < k_1,\quad \text{todas as chaves em } c_1 \in (k_1, k_2),\quad \dots,\quad \text{todas em } c_k > k_k
+\]
+
+O número de filhos de um nó é sempre uma unidade a mais do que o número de chaves. 
+Assim, um nó pode ter entre \( t - 1 \) e \( 2t - 1 \) chaves e entre \( t \) e \( 2t \) filhos (exceto a raiz).
+
+\vspace{1em}
+\textbf{Exemplo com \( t = 3 \):}
+
+Neste caso, cada nó pode ter entre 2 e 5 chaves e entre 3 e 6 filhos. 
+Abaixo está uma representação textual e visual de um nó que contém 3 chaves e, portanto, 4 filhos:
+\vspace{1em}
+Visualmente, esse nó pode ser representado assim:
+
+\[
+\begin{array}{cccccccccccc}
+  \boxed{c_0}      &  k_1 = 17 & \boxed{c_1}       &  k_2 = 30 & \boxed{c_2}      &  k_3 = 42 & \boxed{c_3}        \\
+   \downarrow      &           & \downarrow        &           & \downarrow       &           & \downarrow         \\
+  \text{subárvore} &           & \text{subárvore}  &           & \text{subárvore} &           & \text{subárvore}
+\end{array}
+\]
+
+
+Nesse exemplo, o nó possui três chaves ordenadas \( k_1 = 17 \), \( k_2 = 30 \), \( k_3 = 42 \), e quatro ponteiros \( c_0, c_1, c_2, c_3, c_4 \), intercalados entre as chaves. 
+Cada ponteiro aponta para uma subárvore que cobre o intervalo correspondente:
+\begin{itemize}
+  \item \( c_0 \): chaves menores que 17
+  \item \( c_1 \): chaves entre 17 e 30
+  \item \( c_2 \): chaves entre 30 e 42
+  \item \( c_3 \): chaves maiores que 42
+\end{itemize}
+
+Essa estrutura é especialmente eficiente para leitura em disco: o nó inteiro pode ser armazenado em um único bloco, e ao acessá-lo, o sistema já carrega diversas chaves e todos os ponteiros relevantes para decidir o próximo passo da busca, da inserção ou da remoção.
+
+A seguir está o código em C que define a estrutura de uma árvore B com grau mínimo genérico \( t \), representado simbolicamente pela constante \texttt{T}. 
+Cada nó pode armazenar até \( 2t - 1 \) chaves e até \( 2t \) ponteiros para filhos. 
+No trecho abaixo, o valor de \texttt{T} está fixado em 3, mas ele pode ser ajustado conforme a aplicação.
+
+\begin{lstlisting}
+// Grau mínimo da árvore B
+#define T 3
+
+// Número máximo de chaves e filhos por nó
+#define MAX_KEYS (2 * T - 1)
+#define MAX_CHILDREN (2 * T)
+
+// Estrutura de um nó da árvore B
+typedef struct BTreeNode {
+    int n;                           // Número de chaves atualmente no nó
+    int is_leaf;                     // 1 se for folha, 0 caso contrário
+    int keys[MAX_KEYS];             // Vetor de chaves ordenadas
+    struct BTreeNode* children[MAX_CHILDREN];  // Ponteiros para os filhos
+} BTreeNode;
+
+// Estrutura da árvore B (mantém referência à raiz)
+typedef struct BTree {
+    BTreeNode* root;
+} BTree;
+\end{lstlisting}
+
+A seguir, definimos funções para criar um novo nó e uma nova árvore B vazia com a raiz sendo uma folha:
+
+\begin{lstlisting}
+#include <stdlib.h>
+
+// Cria um novo nó da árvore B
+BTreeNode* create_node(int is_leaf) {
+    BTreeNode* node = (BTreeNode*) malloc(sizeof(BTreeNode));
+    node->n = 0;
+    node->is_leaf = is_leaf;
+    for (int i = 0; i < MAX_CHILDREN; i++) {
+        node->children[i] = NULL;
+    }
+    return node;
+}
+
+// Cria uma nova árvore B com raiz vazia
+BTree* create_btree() {
+    BTree* tree = (BTree*) malloc(sizeof(BTree));
+    tree->root = create_node(1);  // começa com a raiz sendo uma folha
+    return tree;
+}
+\end{lstlisting}
+
+\section{Função {\tt buscar}}
+
+A operação de busca em uma árvore B segue o mesmo princípio das árvores de busca binária, porém adaptada para nós que contêm múltiplas chaves. A cada nível da árvore, a busca ocorre em dois passos:
+
+\begin{enumerate}
+  \item Percorremos sequencialmente o vetor de chaves do nó atual até encontrar a chave desejada ou uma chave maior.
+  \item Se encontrarmos a chave, a busca termina com sucesso. 
+  Caso contrário, seguimos para o filho correspondente, cujo intervalo contém a chave procurada.
+\end{enumerate}
+
+Como cada nó possui múltiplas chaves, conseguimos descartar grandes intervalos do espaço de busca em cada passo, mantendo a profundidade da árvore pequena (proporcional a \( \log_t n \)). 
+Isso torna a busca eficiente, com poucos acessos a disco em aplicações de memória externa.
+
+A busca é naturalmente recursiva, mas pode ser implementada iterativamente. 
+
+\begin{lstlisting}
+// Busca uma chave em um nó da árvore B (recursivamente)
+BTreeNode* btree_search_node(BTreeNode* node, int key, int* index_out) {
+    int i = 0;
+    while (i < node->n && key > node->keys[i]) {
+        i++;
+    }
+
+    if (i < node->n && key == node->keys[i]) {
+        if (index_out) *index_out = i;
+        return node;
+    }
+
+    if (node->is_leaf) return NULL;
+
+    return btree_search_node(node->children[i], key, index_out);
+}
+
+// Busca uma chave na árvore B
+BTreeNode* btree_search(BTree* tree, int key, int* index_out) {
+    if (!tree || !tree->root) return NULL;
+    return btree_search_node(tree->root, key, index_out);
+}
+\end{lstlisting}
+
+
+A complexidade é \( O(\log n) \) no pior caso, tanto em número de comparações quanto em profundidade da árvore.
+
+\section{Função {\tt inserir}}
+
+O processo de inserção em árvores B mantém a árvore balanceada e todas as suas propriedades. 
+O objetivo é inserir uma nova chave mantendo as chaves em ordem e garantindo que nenhum nó ultrapasse o número máximo de \( 2t - 1 \) chaves.
+
+A inserção pode ocorrer em duas situações:
+
+\begin{itemize}
+  \item \textbf{Inserção em uma folha que ainda possui espaço:} a chave é inserida diretamente no vetor de chaves do nó, mantendo a ordenação.
+  \item \textbf{Inserção em uma folha cheia:} o nó precisa ser dividido. A chave mediana sobe para o pai, e o nó é dividido em dois nós com \( t - 1 \) chaves cada.
+\end{itemize}
+
+Considere a inserção da chave 35 em um nó que já contém as chaves 17, 24, 30, 42 e 50. 
+Com \( t = 3 \), o nó já está com o número máximo de chaves (\( 2t - 1 = 5 \)) e precisa ser dividido.
+
+O processo é o seguinte:
+
+\begin{enumerate}
+  \item As chaves do nó são reorganizadas com a nova chave: 17, 24, 30, \textbf{35}, 42, 50.
+  \item A chave mediana (35) é promovida ao nó pai.
+  \item As chaves menores que 35 permanecem no nó original.
+  \item As chaves maiores que 35 vão para um novo nó à direita.
+\end{enumerate}
+
+O diagrama abaixo mostra a estrutura antes e depois da divisão:
+
+\vspace{1em}
+\textbf{Antes da inserção:}
+\[
+\begin{array}{c}
+\boxed{17 \quad 24 \quad 30 \quad 42 \quad 50}
+\end{array}
+\]
+
+\textbf{Após tentativa de inserir 35 (antes da divisão):}
+\[
+\begin{array}{c}
+\boxed{17 \quad 24 \quad 30 \quad \textbf{35} \quad 42 \quad 50}
+\end{array}
+\]
+
+\textbf{Após a divisão:}
+\[
+\begin{array}{ccccccc}
+  \boxed{c_i}                  &  k_1 = 35 & \boxed{c_{i+1}} \\
+  \downarrow                   &           & \downarrow  \\
+  \boxed{17 \quad 24 \quad 30} &           & \boxed{42 \quad 50}
+\end{array}
+\]
+
+Se o nó pai também estiver cheio, o processo se repete recursivamente até (se necessário) a raiz ser dividida e a altura da árvore aumentar em 1.
+
+Quando um nó folha está cheio e uma nova chave é inserida, ele é dividido e a chave mediana é promovida ao nó pai. 
+Essa chave deve ser inserida em ordem no vetor de chaves do pai, e o novo ponteiro (referente ao nó criado à direita da divisão) deve ser inserido imediatamente à direita da nova chave.
+
+Por exemplo, suponha que o nó pai inicialmente contenha:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      &  k_1 = 12 & \boxed{c_1}                                    & k_2 = 55 & \boxed{c_2}     \\
+  \downarrow       &           & \downarrow                                     &          & \downarrow      \\
+  \text{subarvore} &           & \boxed{17 \quad 24 \quad 30 \quad 42 \quad 50} &          & \text{subarvore}
+\end{array}
+\]
+
+Após a promoção da chave \( 35 \), ela deve ser inserida entre 12 e 55, e um novo ponteiro \( c_{\text{novo}} \) deve ser inserido à sua direita. O resultado será:
+
+\[
+\begin{array}{cccccccccc}
+  \boxed{c_0}      &  k_1 = 12 & \boxed{c_1}                  & k_2 = 35 & \boxed{c_{novo}}            & k_2 = 55 & \boxed{c_2}     \\
+  \downarrow       &           & \downarrow                   &          & \downarrow                   &          & \downarrow      \\
+  \text{subarvore} &           & \boxed{17 \quad 24 \quad 30} &          & \boxed{\quad 42 \quad 50}   &          & \text{subarvore}
+\end{array}
+\]
+
+A estrutura do nó pai continua com chaves ordenadas e ponteiros intercalados, mantendo as propriedades da árvore B.
+
+A inserção em uma árvore B é feita de forma recursiva, sempre garantindo que a chave seja inserida em um nó que ainda não está cheio. 
+Quando um nó está cheio, ele é dividido antes da inserção. 
+A seguir, explicamos as principais funções envolvidas no processo.
+
+Essa é a função principal de inserção. 
+Ela verifica se a raiz da árvore está cheia. 
+Se estiver, cria uma nova raiz, divide a antiga e então chama a função auxiliar \texttt{btree\_insert\_nonfull}.
+
+\begin{lstlisting}
+void btree_insert(BTree* tree, int key) {
+    BTreeNode* root = tree->root;
+
+    if (root->n == MAX_KEYS) {
+        BTreeNode* new_root = create_node(0);
+        new_root->children[0] = root;
+        btree_split_child(new_root, 0);
+        tree->root = new_root;
+        btree_insert_nonfull(new_root, key);
+    } else {
+        btree_insert_nonfull(root, key);
+    }
+}
+\end{lstlisting}
+
+Vamos primeiro considerar o caso em que o nó que \emph{não está cheio}. 
+Se o nó for uma folha, a chave é inserida diretamente no vetor de chaves. 
+Se o nó for interno, a função localiza o filho adequado e, caso ele esteja cheio, o divide antes de continuar.
+
+\begin{lstlisting}
+void btree_insert_nonfull(BTreeNode* node, int key) {
+    int i = node->n - 1;
+
+    if (node->is_leaf) {
+        while (i >= 0 && key < node->keys[i]) {
+            node->keys[i + 1] = node->keys[i];
+            i--;
+        }
+        node->keys[i + 1] = key;
+        node->n++;
+    } else {
+        while (i >= 0 && key < node->keys[i]) {
+            i--;
+        }
+        i++;
+        if (node->children[i]->n == MAX_KEYS) {
+            btree_split_child(node, i);
+            if (key > node->keys[i]) {
+                i++;
+            }
+        }
+        btree_insert_nonfull(node->children[i], key);
+    }
+}
+\end{lstlisting}
+
+Caso o nó esteja cheio essa função divide o filho \texttt{children[i]}. 
+A chave mediana é promovida para \texttt{node}, e um novo nó é criado com as chaves maiores. 
+As subárvores também são realocadas, se necessário.
+
+\begin{lstlisting}
+void btree_split_child(BTreeNode* node, int i) {
+    BTreeNode* y = node->children[i];
+    BTreeNode* z = create_node(y->is_leaf);
+    z->n = T - 1;
+
+    for (int j = 0; j < T - 1; j++) {
+        z->keys[j] = y->keys[j + T];
+    }
+
+    if (!y->is_leaf) {
+        for (int j = 0; j < T; j++) {
+            z->children[j] = y->children[j + T];
+        }
+    }
+
+    y->n = T - 1;
+
+    for (int j = node->n; j >= i + 1; j--) {
+        node->children[j + 1] = node->children[j];
+    }
+    node->children[i + 1] = z;
+
+    for (int j = node->n - 1; j >= i; j--) {
+        node->keys[j + 1] = node->keys[j];
+    }
+    node->keys[i] = y->keys[T - 1];
+    node->n++;
+}
+\end{lstlisting}
+
+\section{Função {\tt remover}}
+
+A operação de remoção em árvores B é mais complexa do que a inserção, pois deve garantir que todos os nós (exceto a raiz) mantenham pelo menos \( t - 1 \) chaves após a remoção. 
+Isso exige, em alguns casos, realizar fusões de nós ou redistribuições de chaves entre irmãos.
+
+O processo de remoção envolve múltiplos casos, dependendo de onde está a chave a ser removida e das condições dos nós envolvidos. 
+A seguir, apresentamos os casos possíveis:
+
+\subsection*{Caso 1: a chave está em um nó folha}
+
+Este é o caso mais simples. 
+Basta remover a chave diretamente do vetor de chaves do nó.
+
+\subsection*{Caso 2: a chave está em um nó interno}
+
+Nesse caso, temos três subcasos possíveis:
+
+\begin{itemize}
+  \item \textbf{2a. O filho anterior (\( c_i \)) tem pelo menos \( t \) chaves:} substituímos a chave a ser removida pela maior chave da subárvore esquerda e removemos recursivamente essa chave.
+
+Considere o seguinte nó:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      &  k_1 = 35 & \boxed{c_1}       & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &           & \downarrow        &          & \downarrow  \\
+  \boxed{10 \quad 20 \quad 30 \quad \textbf{34}} &  & \text{subarvore} &  & \text{subarvore}
+\end{array}
+\]
+
+Desejamos remover a chave \( 35 \), que está no nó interno. 
+O filho à esquerda, \( c_0 \), contém pelo menos \( t = 3 \) chaves, então aplicamos a substituição pelo \textbf{predecessor} da chave -- neste caso, a maior chave em \( c_0 \), que é \( \mathbf{34} \).
+
+A nova configuração do nó será:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      &  k_1 = \mathbf{34} & \boxed{c_1}       & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &           & \downarrow        &          & \downarrow  \\
+  \boxed{10 \quad 20 \quad 30} &  & \text{subarvore} &  & \text{subarvore}
+\end{array}
+\]
+
+Agora, a chave \( 35 \) foi substituída por \( 34 \), e a chave \( 34 \) será removida recursivamente do nó \( c_0 \).
+
+  \item \textbf{2b. O filho seguinte (\( c_{i+1} \)) tem pelo menos \( t \) chaves:} substituímos a chave pela menor chave da subárvore direita e removemos recursivamente essa chave.
+
+Considere o seguinte nó:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      &  k_1 = 35 & \boxed{c_1}        & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &           & \downarrow         &          & \downarrow  \\
+  \text{subarvore} &       & \boxed{\mathbf{36} \quad 40 \quad 48 \quad 55} &        & \text{subarvore}
+\end{array}
+\]
+
+Desejamos remover a chave \( 35 \), que está no nó interno. O filho à direita, \( c_1 \), contém pelo menos \( t = 3 \) chaves. 
+Nesse caso, substituímos a chave \( 35 \) por seu \textbf{sucessor}, a menor chave da subárvore direita — neste exemplo, \( \mathbf{36} \).
+
+A nova configuração do nó será:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      &  k_1 = \mathbf{36} & \boxed{c_1}         & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &           & \downarrow          &          & \downarrow  \\
+  \text{subarvore} &       & \boxed{40 \quad 48 \quad 55} &        & \text{subarvore}
+\end{array}
+\]
+
+Agora, a chave \( 35 \) foi substituída por \( 36 \), e a chave \( 36 \) será removida recursivamente do nó \( c_1 \).
+
+
+  \item \textbf{2c. Ambos os filhos têm exatamente \( t - 1 \) chaves:} unimos os dois filhos e a chave entre eles em um único nó e continuamos a remoção recursivamente.
+
+Considere o seguinte nó:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      &  k_1 = \mathbf{35} & \boxed{c_1}        & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &           & \downarrow         &          & \downarrow  \\
+  \boxed{28 \quad 30} &         & \boxed{36 \quad 40} &        & \text{subarvore}
+\end{array}
+\]
+
+Queremos remover a chave \( 35 \), que está no nó interno. 
+Ambos os filhos adjacentes, \( c_0 \) e \( c_1 \), têm exatamente \( t - 1 = 2 \) chaves (assumindo \( t = 3 \)). 
+Nesse caso, fundimos os dois filhos e a chave \( 35 \) em um único nó com 5 chaves:
+
+\[
+\begin{array}{ccccc}
+  \boxed{c_{\text{fundido}}} & k_1 = 60 & \boxed{c_2} \\
+  \downarrow & & \downarrow \\
+  \boxed{28 \quad 30 \quad \mathbf{35} \quad 36 \quad 40} & & \text{subarvore}
+\end{array}
+\]
+
+Agora o nó pai tem uma chave a menos, e a árvore continua válida. 
+A remoção da chave \( 35 \) continua recursivamente no novo nó fundido.
+
+\end{itemize}
+
+\subsection*{Caso 3: a chave não está no nó e a descida ocorre para um filho com \( t - 1 \) chaves}
+
+Se ao descer a árvore encontramos um filho com o número mínimo de chaves, precisamos garantir que ele tenha pelo menos \( t \) chaves antes de prosseguir. Isso pode ser feito de duas formas:
+
+\begin{itemize}
+  \item \textbf{3a. O irmão à esquerda ou à direita tem pelo menos \( t \) chaves:} realizamos uma rotação, movendo uma chave do pai para o filho e uma chave do irmão para o pai.
+
+Considere o seguinte nó pai:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      & k_1 = 30 & \boxed{c_1}        & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &          & \downarrow         &          & \downarrow  \\
+  \boxed{10 \quad 20 \quad \mathbf{25}} & & \boxed{34} & & \text{subarvore}
+\end{array}
+\]
+
+O filho \( c_1 \) tem apenas uma chave (\( t - 1 \)), e precisamos descer por ele para remover algum valor. Seu irmão à esquerda, \( c_0 \), tem 3 chaves (assumindo \( t = 3 \)) e pode ceder uma chave.
+
+Executamos a rotação:
+\begin{itemize}
+\item A chave \( 30 \) (do pai) desce para \( c_1 \);
+\item A maior chave de \( c_0 \), que é \( 25 \), sobe para o pai;
+\item Se houver ponteiros, o último de \( c_0 \) é transferido para \( c_1 \).
+\end{itemize}
+
+\textbf{Depois da rotação:}
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      & k_1 = \mathbf{25} & \boxed{c_1}         & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &           & \downarrow          &          & \downarrow  \\
+  \boxed{10 \quad 20} &         & \boxed{\mathbf{30} \quad 34} &        & \text{subarvore}
+\end{array}
+\]
+
+Agora \( c_1 \) possui 2 chaves e a remoção pode prosseguir. As propriedades da árvore B estão preservadas: todos os nós (exceto possivelmente a raiz) mantêm pelo menos \( t - 1 \) chaves.
+
+  \item \textbf{3b. Ambos os irmãos têm \( t - 1 \) chaves:} fundimos o filho com um dos irmãos, reduzindo o número de filhos do nó pai.
+
+  \subsection*{Caso 3b: Fusão quando todos os irmãos têm \( t - 1 \) chaves}
+
+Considere o seguinte nó pai:
+
+\[
+\begin{array}{ccccccc}
+  \boxed{c_0}      & k_1 = \mathbf{30} & \boxed{c_1}        & k_2 = 60 & \boxed{c_2} \\
+  \downarrow       &          & \downarrow         &          & \downarrow  \\
+  \boxed{10 \quad 20} &        & \boxed{34}         &          & \text{subarvore}
+\end{array}
+\]
+
+Suponha que desejamos descer por \( c_1 \), que tem apenas 1 chave (\( t - 1 \)), e seu irmão à esquerda \( c_0 \) também tem apenas \( t - 1 = 2 \) chaves (assumindo \( t = 3 \)). 
+Como nenhum dos irmãos pode ceder uma chave, realizamos uma {\em fusão} de \( c_0 \), a chave \( 30 \) e \( c_1 \) em um único nó.
+
+\textbf{Após a fusão:}
+
+\[
+\begin{array}{cccccc}
+  \boxed{c_{\text{fundido}}} & k_1 = 60 & \boxed{c_2} \\
+  \downarrow & & \downarrow \\
+  \boxed{10 \quad 20 \quad \mathbf{30} \quad 34} & & \text{subarvore}
+\end{array}
+\]
+
+Agora:
+\begin{itemize}
+\item A chave \( 30 \) foi removida do pai e fundida com os dois filhos adjacentes;
+\item O número de filhos do pai foi reduzido;
+\item A remoção prossegue recursivamente no nó fundido.
+\end{itemize}
+
+Se a fusão esvaziar a raiz, a altura da árvore diminui em 1, pois a nova raiz será o nó fundido.
+
+\end{itemize}
+
+A cada etapa da remoção, tomamos cuidado para que as propriedades fundamentais da árvore B sejam preservadas:
+
+\begin{itemize}
+  \item \textbf{Todos os nós (exceto a raiz) possuem pelo menos \( t - 1 \) chaves:}  
+  Antes de descer por um filho com exatamente \( t - 1 \) chaves, garantimos que ele receba uma chave extra, seja por rotação com um irmão (caso 3a) ou por fusão com um irmão e uma chave do pai (caso 3b). 
+  Assim, evitamos que o nó atinja um número de chaves inferior ao permitido.
+  
+  \item \textbf{As chaves permanecem ordenadas:}  
+  Tanto as substituições por predecessores ou sucessores (casos 2a e 2b), quanto as rotações e fusões, preservam a ordem das chaves nos nós. 
+  A árvore mantém sua propriedade de busca, ou seja, todas as chaves em um filho à esquerda de uma chave \( k \) são menores que \( k \), e todas as chaves no filho à direita são maiores.
+  
+  \item \textbf{A altura da árvore pode diminuir:}  
+  Em situações em que a raiz perde sua última chave -- por exemplo, após uma fusão entre seus dois únicos filhos --, ela deixa de ser necessária e a árvore diminui de altura. 
+  Isso é permitido e faz parte do funcionamento da estrutura: a árvore B se adapta dinamicamente ao número de elementos, mantendo-se balanceada com altura proporcional a \( \log_t n \).
+\end{itemize}
+
+A função \texttt{btree\_delete} é o ponto de entrada para a remoção de uma chave na árvore B. Ela realiza as seguintes etapas:
+
+\begin{itemize}
+  \item Verifica se a raiz da árvore está vazia. Caso esteja, não há o que remover.
+  \item Chama a função auxiliar \texttt{delete\_from\_node}, que implementa a lógica recursiva da remoção.
+  \item Após a remoção, verifica se a raiz ficou sem nenhuma chave. Se isso acontecer:
+    \begin{itemize}
+      \item Se a raiz for uma folha, a árvore se torna vazia.
+      \item Se a raiz não for uma folha (ou seja, tinha filhos), a altura da árvore diminui: o primeiro filho da raiz se torna a nova raiz.
+    \end{itemize}
+\end{itemize}
+
+Esse procedimento é necessário porque, em árvores B, a raiz é o único nó autorizado a ter menos de \( t - 1 \) chaves. 
+Quando ela se esvazia completamente e ainda possui filhos, isso indica que o conteúdo real da árvore está em um nível inferior e a estrutura pode ser simplificada.
+
+A remoção nunca quebra as propriedades da árvore B: após essa verificação e ajuste, a árvore continua válida, balanceada e com todas as restrições de número de chaves por nó satisfeitas.
+
+\begin{lstlisting}
+// Função principal: remove uma chave da árvore B
+void btree_delete(BTree* tree, int key) {
+    if (!tree->root) return;
+
+    delete_from_node(tree->root, key);
+
+    // Se a raiz ficou sem chaves e tem filhos, diminui a altura
+    if (tree->root->n == 0) {
+        BTreeNode* old_root = tree->root;
+        if (old_root->is_leaf) {
+            // árvore vazia
+            free(old_root);
+            tree->root = NULL;
+        } else {
+            tree->root = old_root->children[0];
+            free(old_root);
+        }
+    }
+}
+\end{lstlisting}
+
+A função \texttt{delete\_from\_node} remove uma chave de um nó da árvore B, tratando todos os casos previstos:
+
+\begin{itemize}
+  \item Se a chave está no nó e ele é uma folha, a chave é simplesmente removida.
+  \item Se a chave está no nó e ele é interno:
+    \begin{itemize}
+      \item Se o filho anterior tem pelo menos \( t \) chaves, a chave é substituída pelo seu predecessor.
+      \item Caso contrário, se o filho seguinte tem pelo menos \( t \) chaves, a chave é substituída pelo sucessor.
+      \item Se ambos os filhos têm \( t - 1 \) chaves, realiza-se uma fusão e a remoção continua no nó resultante.
+    \end{itemize}
+  \item Se a chave não está no nó, é necessário descer para o filho apropriado. Antes disso, se esse filho tiver apenas \( t - 1 \) chaves, é preciso garantir que ele tenha pelo menos \( t \) -- usando rotação (caso 3a) ou fusão (caso 3b).
+\end{itemize}
+
+\begin{lstlisting}
+// Remove uma chave de um nó da árvore B
+void delete_from_node(BTreeNode* node, int key) {
+    int idx = 0;
+    while (idx < node->n && key > node->keys[idx]) {
+        idx++;
+    }
+
+    // Caso 1 e 2: chave encontrada no nó
+    if (idx < node->n && node->keys[idx] == key) {
+        if (node->is_leaf) {
+            // Caso 1: nó folha
+            for (int i = idx + 1; i < node->n; i++) {
+                node->keys[i - 1] = node->keys[i];
+            }
+            node->n--;
+        } else {
+            // Caso 2: nó interno
+            BTreeNode* left = node->children[idx];
+            BTreeNode* right = node->children[idx + 1];
+
+            if (left->n >= T) {
+                int pred = get_predecessor(left);
+                node->keys[idx] = pred;
+                delete_from_node(left, pred);
+            } else if (right->n >= T) {
+                int succ = get_successor(right);
+                node->keys[idx] = succ;
+                delete_from_node(right, succ);
+            } else {
+                merge_children(node, idx);
+                delete_from_node(left, key); // após fusão, left contém tudo
+            }
+        }
+    } else {
+        // Caso 3: chave não está no nó
+        if (node->is_leaf) return; // chave não encontrada
+
+        BTreeNode* child = node->children[idx];
+
+        // Se o filho tem apenas t-1 chaves, prepare-o
+        if (child->n == T - 1) {
+            fill(node, idx);
+        }
+
+        // Após ajuste, reobter o filho (pode ter sido fundido)
+        if (idx > node->n) {
+            delete_from_node(node->children[idx - 1], key);
+        } else {
+            delete_from_node(node->children[idx], key);
+        }
+    }
+}
+\end{lstlisting}
+
+A seguinte função percorre o filho mais à direita recursivamente até encontrar uma folha e retorna sua última chave.
+
+\begin{lstlisting}
+// Retorna a maior chave da subárvore esquerda
+int get_predecessor(BTreeNode* node) {
+    while (!node->is_leaf) {
+        node = node->children[node->n];
+    }
+    return node->keys[node->n - 1];
+}
+\end{lstlisting}
+
+Simétrica à anterior, a função a seguir percorre o filho mais à esquerda até uma folha e retorna sua primeira chave.
+
+\begin{lstlisting}
+// Retorna a menor chave da subárvore direita
+int get_successor(BTreeNode* node) {
+    while (!node->is_leaf) {
+        node = node->children[0];
+    }
+    return node->keys[0];
+}
+\end{lstlisting}
+
+A próxima função funde dois filhos e a chave que os separa, reduzindo o número de filhos e reorganizando o nó pai.
+
+\begin{lstlisting}
+// Funde os filhos children[idx] e children[idx+1] com a chave entre eles
+void merge_children(BTreeNode* node, int idx) {
+    BTreeNode* left = node->children[idx];
+    BTreeNode* right = node->children[idx + 1];
+
+    // Move a chave do pai para o meio de left
+    left->keys[T - 1] = node->keys[idx];
+
+    // Copia chaves de right para left
+    for (int i = 0; i < right->n; i++) {
+        left->keys[i + T] = right->keys[i];
+    }
+
+    // Copia filhos de right (se não for folha)
+    if (!left->is_leaf) {
+        for (int i = 0; i <= right->n; i++) {
+            left->children[i + T] = right->children[i];
+        }
+    }
+
+    left->n += right->n + 1;
+
+    // Remove chave e ponteiro do pai
+    for (int i = idx + 1; i < node->n; i++) {
+        node->keys[i - 1] = node->keys[i];
+        node->children[i] = node->children[i + 1];
+    }
+    node->n--;
+
+    free(right);
+}
+\end{lstlisting}
+
+
+Chamada quando um filho com $t - 1$ chaves precisa ser ajustado antes de continuar a descida chamamos a seguinte função que tenta rotação com um irmão; se não for possível, realiza fusão.
+
+\begin{lstlisting}
+// Garante que children[idx] terá pelo menos T chaves
+void fill(BTreeNode* node, int idx) {
+    if (idx > 0 && node->children[idx - 1]->n >= T) {
+        borrow_from_prev(node, idx);
+    } else if (idx < node->n && node->children[idx + 1]->n >= T) {
+        borrow_from_next(node, idx);
+    } else {
+        if (idx < node->n) {
+            merge_children(node, idx);
+        } else {
+            merge_children(node, idx - 1);
+        }
+    }
+}
+\end{lstlisting}
+
+A função {\tt borrow\_from\_prev} realiza uma rotação à direita, transferindo uma chave do irmão esquerdo para o filho e ajustando o pai para manter as propriedades da árvore B.
+
+\begin{lstlisting}
+// Rotação: empresta do irmão anterior
+void borrow_from_prev(BTreeNode* node, int idx) {
+    BTreeNode* child = node->children[idx];
+    BTreeNode* sibling = node->children[idx - 1];
+
+    // Desloca chaves e filhos de child para a direita
+    for (int i = child->n - 1; i >= 0; i--) {
+        child->keys[i + 1] = child->keys[i];
+    }
+    if (!child->is_leaf) {
+        for (int i = child->n; i >= 0; i--) {
+            child->children[i + 1] = child->children[i];
+        }
+    }
+
+    // Move chave do pai para child
+    child->keys[0] = node->keys[idx - 1];
+
+    // Move último filho do irmão para child
+    if (!child->is_leaf) {
+        child->children[0] = sibling->children[sibling->n];
+    }
+
+    // Move chave do irmão para o pai
+    node->keys[idx - 1] = sibling->keys[sibling->n - 1];
+
+    child->n++;
+    sibling->n--;
+}
+\end{lstlisting}
+
+A função {\tt borrow\_from\_next} é análoga a anterior:
+
+\begin{lstlisting}
+// Rotação: empresta do irmão seguinte
+void borrow_from_next(BTreeNode* node, int idx) {
+    BTreeNode* child = node->children[idx];
+    BTreeNode* sibling = node->children[idx + 1];
+
+    // Move chave do pai para child
+    child->keys[child->n] = node->keys[idx];
+
+    // Move primeiro filho do irmão, se necessário
+    if (!child->is_leaf) {
+        child->children[child->n + 1] = sibling->children[0];
+    }
+
+    // Move chave do irmão para o pai
+    node->keys[idx] = sibling->keys[0];
+
+    // Ajusta chaves e filhos do irmão
+    for (int i = 1; i < sibling->n; i++) {
+        sibling->keys[i - 1] = sibling->keys[i];
+    }
+    if (!sibling->is_leaf) {
+        for (int i = 1; i <= sibling->n; i++) {
+            sibling->children[i - 1] = sibling->children[i];
+        }
+    }
+
+    child->n++;
+    sibling->n--;
+}
+\end{lstlisting}
+
+\section{Árvores B+}
+
+Uma árvore B+ é uma variação da árvore B projetada para otimizar o desempenho de buscas em grandes volumes de dados, especialmente em sistemas de banco de dados e arquivos.
+
+A principal diferença em relação à árvore B tradicional é que:
+\begin{itemize}
+  \item Todas as chaves e valores \textbf{são armazenados apenas nas folhas}.
+  \item Os nós internos armazenam apenas chaves de direcionamento, usadas para navegação.
+  \item As folhas são \textbf{encadeadas entre si}, formando uma lista ligada ordenada, o que permite percorrer intervalos de chaves com muita eficiência.
+\end{itemize}
+
+Essa estrutura permite que:
+\begin{itemize}
+  \item A busca por um único valor continue eficiente, com complexidade \( O(\log n) \).
+  \item A leitura sequencial de registros ordenados (como em operações de varredura ou range scan) seja extremamente rápida.
+\end{itemize}
+
+Devido a essas características, árvores B+ são amplamente utilizadas em sistemas de gerenciamento de banco de dados, onde operações com intervalos de chaves são frequentes.
+
+Árvores B e B+ são amplamente utilizadas em sistemas que exigem acesso eficiente a grandes volumes de dados armazenados em memória secundária. 
+A seguir, destacamos algumas implementações conhecidas:
+
+\begin{itemize}
+  \item \textbf{Sistemas de arquivos:}
+  \begin{itemize}
+    \item \textbf{NTFS (Windows)} usa uma variação de árvore B+ chamada \textit{Master File Table (MFT)} para indexar metadados de arquivos.
+    \item \textbf{ext4 (Linux)} utiliza uma estrutura baseada em árvore B para gerenciar blocos de dados e diretórios grandes.
+    \item \textbf{HFS+ e APFS (macOS)} também empregam variações de árvores B+ para indexação de arquivos.
+  \end{itemize}
+
+  \item \textbf{Bancos de dados relacionais:}
+  \begin{itemize}
+    \item \textbf{PostgreSQL} usa árvores B+ para seus índices padrão (tipo \texttt{btree}), otimizando buscas e operações de ordenação.
+    \item \textbf{MySQL (InnoDB)} também utiliza árvores B+ para a implementação de índices primários e secundários.
+    \item \textbf{SQLite} implementa uma variação compacta de árvore B para representar suas páginas de índice e dados.
+  \end{itemize}
+\end{itemize}
+
+Esses exemplos demonstram a robustez e a versatilidade das árvores B e B+, especialmente em contextos onde a eficiência de acesso e atualização em disco é crítica.

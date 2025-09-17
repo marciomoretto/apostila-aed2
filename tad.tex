@@ -1,0 +1,409 @@
+\chapter{Tipos Abstratos de Dados (TADs)}
+
+Quando programamos, é comum precisarmos agrupar dados e definir operações que possam ser realizadas sobre eles. 
+Por exemplo, ao trabalhar com uma pilha de objetos, queremos adicionar ou remover um item do topo -- e, nesse contexto, o que nos interessa não é como os dados estão armazenados internamente, mas sim o comportamento da estrutura. 
+Essa distinção entre o que uma estrutura faz e como ela faz é o ponto de partida para o conceito de Tipo Abstrato de Dado (TAD).
+
+Um TAD é uma especificação formal de um conjunto de dados e das operações que podem ser realizadas sobre ele, independentemente da forma como essas operações são implementadas. 
+Ao utilizar um TAD, o foco está no comportamento da estrutura -- nas operações disponíveis e em suas propriedades --, e não nos detalhes técnicos de código ou armazenamento. 
+Isso permite que o programador raciocine de forma mais clara sobre o problema que está resolvendo, sem se distrair com questões de implementação.
+
+Essa separação traz diversas vantagens. 
+A principal delas é a modularidade: podemos dividir um programa em partes independentes, em que cada módulo (ou TAD) tem uma responsabilidade bem definida. Isso torna o código mais organizado, mais fácil de entender, de testar e de manter. 
+Outra vantagem importante é a reutilização: um TAD bem projetado pode ser empregado em diferentes programas e contextos, sem a necessidade de reescrever sua lógica.
+
+A essência de um TAD está na separação entre a definição lógica da estrutura e sua implementação concreta. 
+Em vez de manipularmos diretamente a forma como os dados estão organizados na memória — como ocorre na programação estruturada tradicional —, interagimos apenas com um conjunto de funções que compõem a interface do TAD. 
+Essas funções são as únicas autorizadas a acessar e modificar a estrutura interna dos dados. 
+Essa restrição é fundamental: garante que todo acesso e modificação passem por um canal controlado, que pode impor regras e preservar invariantes. 
+Essa abordagem lembra a forma como lidamos com funções em matemática: sabemos o que elas fazem, quais são suas entradas e saídas, mas não precisamos conhecer os detalhes internos de seu funcionamento para utilizá-las corretamente.
+
+Ao longo desta apostila, utilizaremos TADs para representar estruturas como listas, dicionários, filas, árvores e grafos. 
+Em cada caso, começaremos pela especificação abstrata -- ou seja, pela definição das operações disponíveis e de como elas devem se comportar -- e, em seguida, discutiremos possíveis implementações concretas. 
+Essa metodologia permite entender a estrutura conceitualmente antes de mergulhar nos detalhes técnicos de sua construção.
+
+\section{Dicionário Simples}
+
+O TAD Dicionário representa uma coleção de pares chave--valor. Seu objetivo é permitir o armazenamento e a recuperação eficiente de informações associadas a uma chave. 
+No caso do dicionário simples, as chaves são distintas -- ou seja, não há repetições --, e o conjunto de operações é focado na manipulação desse mapeamento básico.
+
+Do ponto de vista abstrato, um dicionário simples oferece as seguintes operações fundamentais:
+
+\begin{itemize}
+  \item \texttt{criar()}: cria um dicionário vazio.
+  
+  \item \texttt{inserir(d, k, v)}: insere no dicionário \texttt{d} o par formado pela chave \texttt{k} e o valor \texttt{v}. Se a chave \texttt{k} já estiver presente, seu valor é substituído por \texttt{v}.
+  
+  \item \texttt{remover(d, k)}: remove do dicionário \texttt{d} o par associado à chave \texttt{k}. Se a chave não estiver presente, nenhuma alteração é feita.
+  
+  \item \texttt{buscar(d, k)}: retorna o valor associado à chave \texttt{k}, caso ela esteja presente no dicionário. Se a chave não existir, a operação indica ausência (por exemplo, retornando \texttt{null} ou um valor especial).
+  
+  \item \texttt{tamanho(d)}: retorna o número de pares armazenados no dicionário.
+  
+  \item \texttt{vazio(d)}: indica se o dicionário está vazio.
+\end{itemize}
+
+Essas operações definem o comportamento esperado da estrutura, sem especificar como os dados são armazenados internamente. 
+A implementação pode variar -- por exemplo, pode-se usar listas, tabelas de dispersão (hash) ou árvores de busca --, mas o comportamento das funções deve seguir essa especificação. 
+Essa separação permite ao programador utilizar o dicionário como uma ferramenta, sem precisar conhecer sua estrutura interna.
+
+Nas próximas seções, estudaremos diferentes formas de implementar esse TAD, analisando os custos de cada operação e as vantagens de cada abordagem conforme o contexto de uso.
+
+
+\subsection{Interface em C}
+
+A seguir, apresentamos a interface do TAD Dicionário, definida em C como um arquivo de cabeçalho (dicionario.h). 
+Essa interface descreve o conjunto de operações disponíveis para quem deseja utilizar um dicionário simples, sem revelar os detalhes da sua implementação. 
+O uso de tipos opacos e ponteiros para funções permite que diferentes implementações (por exemplo, usando listas, tabelas de dispersão ou árvores) possam ser utilizadas de forma intercambiável, desde que respeitem o mesmo contrato.
+
+\begin{lstlisting}[language=C, caption={Interface do TAD Dicionário}, label={lst:dicionario-h}]
+#ifndef dic_H
+#define dic_H
+
+typedef const char* Chave;
+typedef void* Valor;
+
+// Tipo opaco para o dicionário
+typedef struct Dicionario Dicionario;
+
+// Interface do TAD
+Dicionario* dic_criar();
+void dic_inserir(Dicionario* d, Chave k, Valor v);
+void dic_remover(Dicionario* d, Chave k);
+Valor dic_buscar(Dicionario* d, Chave k);
+int dic_tamanho(Dicionario* d);
+int dic_vazio(Dicionario* d);
+void dic_destruir(Dicionario* d);
+
+#endif
+\end{lstlisting}
+
+Vamos analisar os principais elementos dessa interface:
+
+\begin{itemize}
+\item \verb|typedef const char* Chave;| define o tipo das chaves como cadeias de caracteres constantes. 
+Em implementações reais, poderíamos generalizar esse tipo com ponteiros para funções de comparação ou usar um tipo genérico.
+
+\item \verb|typedef void* Valor;| indica que os valores armazenados são genéricos, acessados como ponteiros opacos. 
+Isso torna o dicionário flexível, podendo armazenar qualquer tipo de dado, desde que convertido para \texttt{void*}.
+
+\item \verb|typedef struct Dicionario Dicionario;| declara um tipo opaco: o conteúdo interno da estrutura \texttt{Dicionario} não é revelado ao usuário do TAD. 
+Isso reforça a ideia de encapsulamento -- o usuário interage com o dicionário apenas por meio das funções declaradas.
+
+\item \verb|Dicionario* dic_criar();| aloca e retorna um novo dicionário vazio.
+
+\item \verb|void dic_inserir(...);| insere um par chave–valor. Se a chave já existir, o valor anterior é substituído.
+
+\item \verb|void dic_remover(...);| remove do dicionário o par associado à chave fornecida.
+
+\item \verb|Valor dic_buscar(...);| retorna o valor associado a uma chave, ou \texttt{NULL} caso a chave não esteja presente.
+
+\item \verb|int dic_tamanho(...);| retorna o número de elementos armazenados.
+
+\item \verb|int dic_vazio(...);| retorna 1 se o dicionário estiver vazio, ou 0 caso contrário.
+
+\item \verb|void dic_destruir(...);| libera toda a memória associada ao dicionário.
+\end{itemize}
+
+Essa interface oferece um conjunto consistente e mínimo de operações para manipular dicionários, mantendo a separação entre a especificação e a implementação. 
+A estrutura interna pode ser alterada sem afetar o código dos usuários do TAD, desde que as funções mantenham o comportamento descrito.
+
+\subsection{Exemplo de uso}
+
+A seguir, mostramos um exemplo simples de como utilizar o TAD Dicionário. 
+O programa cria um dicionário, insere dois pares chave–valor, busca um dos valores, remove uma das chaves e verifica se a remoção foi bem-sucedida. 
+Ao final, a memória alocada é liberada com a operação de destruição.
+
+\begin{lstlisting}[language=C, caption={Exemplo de uso do TAD Dicionário}, label={lst:exemplo-uso}]
+#include <stdio.h>
+#include <stdlib.h>
+#include "dicionario.h"
+
+int main() {
+	Dicionario* d = dic_criar();
+
+	dic_inserir(d, "chave1", "valor1");
+	dic_inserir(d, "chave2", "valor2");
+
+	printf("%s\n", (char*) dic_buscar(d, "chave1")); // imprime valor1
+
+	dic_remover(d, "chave1");
+
+	if (dic_buscar(d, "chave1") == NULL)
+    	printf("chave1 removida\n");
+
+	dic_destruir(d);
+	return 0;
+}
+\end{lstlisting}
+
+Vamos destacar alguns pontos importantes sobre esse código:
+
+\begin{itemize}
+\item A função \verb|dic_criar()| aloca dinamicamente um novo dicionário e retorna um ponteiro para ele.
+\item As strings passadas como chave e valor neste exemplo são literais de string (constantes). 
+Como o tipo \verb|Valor| é genérico (\verb|void*|), precisamos fazer \verb|cast| para \verb|char*| ao imprimir.
+\item A função \verb|dic_buscar()| retorna o valor associado à chave ou \verb|NULL| se a chave não estiver presente. Isso é usado para verificar se a remoção foi bem-sucedida.
+\item Por fim, \verb|dic_destruir()| libera toda a memória alocada pelo dicionário.
+\end{itemize}
+
+Esse exemplo mostra como a interface permite manipular o dicionário de forma intuitiva, sem que o usuário precise conhecer a estrutura interna usada para armazenar os dados. 
+A mesma interface pode ser usada com diferentes implementações, o que demonstra na prática a vantagem da abstração promovida pelo TAD.
+
+\subsection{Implementação com Lista Ligada}
+
+Como primeira forma concreta de implementar o TAD Dicionário, utilizamos uma lista ligada simples. 
+Cada elemento da lista armazena um par chave–valor, bem como um ponteiro para o próximo elemento. Essa é uma estratégia simples e direta, adequada para conjuntos pequenos de dados ou para fins didáticos.
+
+Nesta implementação com lista ligada, cada operação é realizada da seguinte forma:
+
+\begin{itemize}
+\item A inserção de um novo par chave–valor é feita sempre no início da lista.
+\item Se a chave já existir, o valor correspondente é atualizado e a lista permanece inalterada em estrutura.
+\item A busca percorre os nós da lista, do primeiro até encontrar a chave desejada ou chegar ao final.
+\item A remoção também percorre a lista até localizar o nó com a chave desejada, ajustando os ponteiros para removê-lo.
+\item A estrutura mantém um contador de elementos, permitindo obter o tamanho atual do dicionário de forma direta.
+\item A verificação de dicionário vazio é feita consultando esse contador.
+\end{itemize}
+
+Essa organização permite uma implementação simples e clara, ideal como primeira aproximação do TAD Dicionário. 
+A estrutura interna permanece escondida do usuário, que interage apenas por meio das funções da interface.
+
+\begin{lstlisting}[language=C, caption={Implementação do TAD Dicionário com lista ligada}, label={lst:dicionario-lista}]
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "dicionario.h"
+
+typedef struct No {
+	Chave chave;
+	Valor valor;
+	struct No* prox;
+} No;
+
+struct Dicionario {
+	No* primeiro;
+	int tamanho;
+};
+
+Dicionario* dic_criar() {
+	Dicionario* d = malloc(sizeof(Dicionario));
+	d->primeiro = NULL;
+	d->tamanho = 0;
+	return d;
+}
+
+void dic_inserir(Dicionario* d, Chave k, Valor v) {
+	No* atual = d->primeiro;
+	while (atual != NULL) {
+		if (strcmp(atual->chave, k) == 0) {
+			atual->valor = v;
+			return;
+		}
+		atual = atual->prox;
+	}
+	No* novo = malloc(sizeof(No));
+	novo->chave = k;
+	novo->valor = v;
+	novo->prox = d->primeiro;
+	d->primeiro = novo;
+	d->tamanho++;
+}
+
+void dic_remover(Dicionario* d, Chave k) {
+	No** pp = &d->primeiro;
+	while (*pp != NULL) {
+		if (strcmp((pp)->chave, k) == 0) {
+			No temp = *pp;
+			*pp = temp->prox;
+			free(temp);
+			d->tamanho--;
+			return;
+		}
+		pp = &(*pp)->prox;
+	}
+}
+
+Valor dic_buscar(Dicionario* d, Chave k) {
+	No* atual = d->primeiro;
+	while (atual != NULL) {
+		if (strcmp(atual->chave, k) == 0) {
+			return atual->valor;
+		}
+		atual = atual->prox;
+	}
+	return NULL;
+}
+
+int dic_tamanho(Dicionario* d) {
+	return d->tamanho;
+}
+
+int dic_vazio(Dicionario* d) {
+	return d->tamanho == 0;
+}
+
+void dic_destruir(Dicionario* d) {
+	No* atual = d->primeiro;
+	while (atual != NULL) {
+		No* temp = atual;
+		atual = atual->prox;
+		free(temp);
+	}
+	free(d);
+}
+\end{lstlisting}
+
+Essa implementação satisfaz todos os requisitos do TAD Dicionário: encapsula os dados, respeita a interface pública definida no arquivo \texttt{dicionario.h}, e pode ser substituída por outra (como uma baseada em tabela de dispersão ou árvore) sem alterar o código dos programas que usam o TAD.
+Essa separação entre interface e implementação é o que torna os TADs uma ferramenta poderosa na construção de software modular e reutilizável.
+
+\subsection{Análise de Eficiência da Implementação com Lista Ligada}
+
+A implementação do TAD Dicionário com lista ligada é funcional e simples, mas sua eficiência depende diretamente do número de elementos armazenados. A seguir, avaliamos cada operação em termos do custo computacional no pior caso, considerando $n$ como o número de pares armazenados no dicionário.
+
+\begin{itemize}
+\item \textbf{\texttt{criar()}}
+A criação do dicionário consiste na alocação de uma estrutura inicial com ponteiro nulo e contador zero.
+\textbf{Custo:} $O(1)$
+
+\item \textbf{\texttt{inserir(d, k, v)}}
+Para inserir, é necessário primeiro percorrer a lista para verificar se a chave já existe. Se encontrar, o valor é atualizado. Caso contrário, um novo nó é inserido no início.
+\textbf{Custo:} $O(n)$ no pior caso (quando a chave não está presente)
+
+\item \textbf{\texttt{remover(d, k)}}
+A remoção percorre a lista até encontrar a chave. Ao localizar o nó, ajusta os ponteiros e libera a memória.
+\textbf{Custo:} $O(n)$ no pior caso
+
+\item \textbf{\texttt{buscar(d, k)}}
+A busca percorre os nós da lista, comparando cada chave até encontrar a desejada ou atingir o final.
+\textbf{Custo:} $O(n)$ no pior caso
+
+\item \textbf{\texttt{tamanho(d)}}
+O tamanho é mantido por um contador atualizado a cada inserção ou remoção, portanto não exige varredura da lista.
+\textbf{Custo:} $O(1)$
+
+\item \textbf{\texttt{vazio(d)}}
+A verificação se o dicionário está vazio consulta apenas o valor do contador.
+\textbf{Custo:} $O(1)$
+
+\item \textbf{\texttt{destruir(d)}}
+A destruição percorre toda a lista e libera a memória de cada nó.
+\textbf{Custo:} $O(n)$
+\end{itemize}
+
+A principal limitação dessa abordagem está nas operações que dependem da busca por uma chave (inserção, remoção e busca propriamente dita), que exigem varredura linear da lista. 
+Mais adiante, exploraremos implementações que oferecem desempenho mais eficiente para essas operações, como tabelas de dispersão e árvores de busca.
+
+\section{Dicionário Ordenado}
+
+O TAD Dicionário Ordenado estende o TAD Dicionário Simples com operações que exploram a ordenação das chaves. 
+Assume-se que as chaves pertencem a um conjunto em que existe uma relação de ordem total -- isto é, qualquer par de chaves pode ser comparado usando operadores como ``menor que'', ``maior que'', ou ``igual''.
+
+O comportamento esperado das operações é o seguinte:
+
+\begin{itemize}
+\item \verb|menor(d)|: retorna a menor chave armazenada no dicionário \texttt{d}, ou indica ausência se o dicionário estiver vazio.
+
+\item \verb|maior(d)|: retorna a maior chave armazenada no dicionário \texttt{d}, ou indica ausência se o dicionário estiver vazio.
+
+\item \verb|anterior(d, k)|: retorna a maior chave armazenada que seja estritamente menor que \texttt{k}, ou indica ausência caso tal chave não exista.
+
+\item \verb|posterior(d, k)|: retorna a menor chave armazenada que seja estritamente maior que \texttt{k}, ou indica ausência caso tal chave não exista.
+
+\item \verb|visitar_em_ordem(d, f)|: percorre o dicionário \texttt{d} em ordem crescente de chave e aplica a função \texttt{f(k, v)} para cada par chave–valor armazenado.
+\end{itemize}
+
+Essas operações permitem, por exemplo, percorrer os dados em ordem crescente, implementar buscas intervalares (como ``todas as chaves entre a e b'') e construir algoritmos que dependem de vizinhanças ordenadas. 
+A implementação dessas operações exige estruturas de dados que mantenham a ordem, como árvores binárias de busca.
+
+\subsection*{Interface em C}
+
+A interface do TAD Dicionário Ordenado é uma extensão da interface do dicionário simples. Se estivéssemos utilizando uma linguagem orientada a objetos, como Java ou C++, poderíamos definir o dicionário ordenado como uma subclasse do dicionário simples, herdando todas as operações básicas e adicionando apenas as operações específicas de ordenação.
+
+Entretanto, como estamos implementando o TAD em C -- uma linguagem que não possui herança nem mecanismos nativos de orientação a objetos -- optamos por declarar explicitamente todas as operações, mesmo que algumas já existam na interface do dicionário simples. 
+Essa repetição facilita a organização e deixa clara a assinatura completa da interface para quem vai utilizá-la.
+
+Abaixo está uma possível definição da interface para o TAD Dicionário Ordenado:
+
+\begin{lstlisting}[language=C, caption={Interface do TAD Dicionário Ordenado}, label={lst:dicionario-ordenado-h}]
+#ifndef dic_ord_H
+#define dic_ord_H
+
+typedef const char* Chave;
+typedef void* Valor;
+
+typedef struct DicionarioOrdenado DicionarioOrdenado;
+
+// Interface herdada do dicionário simples
+DicionarioOrdenado* dic_ord_criar();
+void dic_ord_inserir(DicionarioOrdenado* d, Chave k, Valor v);
+void dic_ord_remover(DicionarioOrdenado* d, Chave k);
+Valor dic_ord_buscar(DicionarioOrdenado* d, Chave k);
+int dic_ord_tamanho(DicionarioOrdenado* d);
+int dic_ord_vazio(DicionarioOrdenado* d);
+void dic_ord_destruir(DicionarioOrdenado* d);
+
+// Novas operações específicas da ordenação
+Chave dic_ord_menor(DicionarioOrdenado* d);
+Chave dic_ord_maior(DicionarioOrdenado* d);
+Chave dic_ord_anterior(DicionarioOrdenado* d, Chave k);
+Chave dic_ord_posterior(DicionarioOrdenado* d, Chave k);
+void dic_ord_visitar_em_ordem(DicionarioOrdenado* d, void (*visita)(Chave, Valor));
+
+#endif
+\end{lstlisting}
+
+Com essa interface, podemos implementar as funções do TAD Dicionário Ordenado usando diferentes estruturas de dados que mantêm os elementos ordenados — como árvores binárias de busca (que veremos a seguir). 
+O usuário do TAD continua protegido da implementação interna, utilizando apenas os nomes das funções definidas na interface.
+
+\subsection{Exemplo de uso}
+
+A seguir, mostramos um exemplo básico de uso do TAD Dicionário Ordenado. 
+O programa insere alguns pares chave–valor, exibe o menor e o maior elemento, e percorre o dicionário em ordem crescente.
+
+\begin{lstlisting}[language=C, caption={Exemplo de uso do Dicionário Ordenado}, label={lst:uso-dicionario-ordenado}]
+#include <stdio.h>
+#include "dic_ord.h"
+
+void imprimir(Chave k, Valor v) {
+	printf("%s -> %s\n", k, (char*) v);
+}
+
+int main() {
+	DicionarioOrdenado* d = dic_ord_criar();
+
+	dic_ord_inserir(d, "joao", "Aluno");
+	dic_ord_inserir(d, "ana", "Professora");
+	dic_ord_inserir(d, "maria", "Coordenadora");
+
+	printf("Menor chave: %s\n", dic_ord_menor(d));
+	printf("Maior chave: %s\n", dic_ord_maior(d));
+
+	Chave a = "maria";
+	Chave ant = dic_ord_anterior(d, a);
+	Chave pos = dic_ord_posterior(d, a);
+	if (ant) printf("Anterior a %s: %s\n", a, ant);
+	if (pos) printf("Posterior a %s: %s\n", a, pos);
+
+	printf("\nElementos em ordem:\n");
+	dic_ord_visitar_em_ordem(d, imprimir);
+
+	dic_ord_destruir(d);
+	return 0;
+}
+\end{lstlisting}
+
+\textbf{Saída esperada:}
+\begin{verbatim}
+Menor chave: ana
+Maior chave: maria
+Anterior a maria: joao
+Posterior a maria: (nada)
+
+Elementos em ordem:
+ana -> Professora
+joao -> Aluno
+maria -> Coordenadora
+\end{verbatim}
+
+Esse exemplo mostra como o TAD Dicionário Ordenado permite não apenas armazenar e recuperar valores por chave, mas também explorar relações de ordem entre as chaves, algo que não seria possível com a versão simples do TAD.

@@ -1,0 +1,116 @@
+\documentclass[a4paper, 12pt]{book} % Classe do documento
+
+% Pacotes básicos
+\usepackage[utf8]{inputenc}   % Codificação de caracteres
+\usepackage[T1]{fontenc}      % Codificação de fonte
+\usepackage[portuguese]{babel} % Idioma do documento
+\usepackage{amsthm, amsmath, amssymb} % Pacotes para matemática
+\usepackage{graphicx}         % Inclusão de imagens
+\usepackage{hyperref}         % Hiperlinks
+\usepackage{tcolorbox}        % Caixas coloridas
+\usepackage{lipsum}           % Gera texto de exemplo (remover após uso)
+\usepackage{mdframed}
+\usepackage{tabularx} % Adicione esta linha no preâmbulo
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{xurl}
+
+\newtheorem{example}{Exemplo}[section]  % numera Exemplo dentro da seção
+
+\newtheorem{exercicio}{Exercício}[chapter]
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, fit}
+
+\tikzstyle{block} = [rectangle, draw, fill=blue!20, text width=6em, text centered, rounded corners, minimum height=3em]
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{io} = [trapezium, trapezium left angle=70, trapezium right angle=110, draw, fill=green!20, minimum height=3em, text centered]
+
+\setcounter{tocdepth}{1}
+
+% Configurações de aparência
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black,
+    pdftitle={Introdução à Programação},
+    pdfauthor={Márcio Moretto Ribeiro},
+}
+
+
+% Título e autor
+\title{Algoritmos e Estruturas de Dados 2\\ Tabelas de hash, árvores de busca e grafos}
+\author{Márcio Moretto Ribeiro}
+\date{\today} % Data automática
+
+% Definir cores para o highlight
+\definecolor{keywordcolor}{rgb}{0.5,0,0.5}  % Roxo para keywords
+\definecolor{commentcolor}{rgb}{0,0.6,0}    % Verde para comentários
+\definecolor{stringcolor}{rgb}{0.6,0,0}     % Vermelho para strings
+
+\renewcommand{\lstlistingname}{Programa}
+
+% Configuração do lstlisting para a linguagem C
+\lstset{
+    inputencoding=utf8,
+    extendedchars=true,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+             {â}{{\^a}}1 {ê}{{\^e}}1 {î}{{\^i}}1 {ô}{{\^o}}1 {û}{{\^u}}1
+             {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1 {Á}{{\'A}}1 {É}{{\'E}}1
+             {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1 {Â}{{\^A}}1 {Ê}{{\^E}}1
+             {Î}{{\^I}}1 {Ô}{{\^O}}1 {Û}{{\^U}}1 {Ã}{{\~A}}1 {Õ}{{\~O}}1
+             {Ç}{{\c{C}}}1 {à}{{\`a}}1 {À}{{\`A}}1,
+    language=C,                   % Linguagem C
+    basicstyle=\ttfamily\small,   % Fonte monospace como verbatim
+    keywordstyle=\color{keywordcolor}\bfseries, % Cor e negrito para keywords
+    commentstyle=\color{commentcolor}\itshape,  % Cor e itálico para comentários
+    stringstyle=\color{stringcolor},            % Cor para strings
+    numbers=left,                 % Números de linha à esquerda
+    numberstyle=\tiny\color{gray},% Estilo dos números de linha
+    stepnumber=1,                 % Numeração de linha a cada linha
+    tabsize=4,                    % Tamanho do tab
+    showstringspaces=false,       % Não mostrar espaços em strings
+    frame=single,                 % Coloca uma borda ao redor do código
+    breaklines=true,              % Quebra linhas longas automaticamente
+    captionpos=b,                 % Posição da legenda abaixo do código
+}
+
+\begin{document}
+
+% Definindo o novo ambiente com título parametrizado
+\newenvironment{extra}[1]
+{
+    \section{#1*}
+     \begin{mdframed}[
+        linewidth=0pt,
+        backgroundcolor=blue!5,
+    ]
+}
+{
+    \end{mdframed}
+}
+
+% Capa
+\maketitle
+\tableofcontents
+
+% Capítulo de introdução
+\include{intro}
+\include{tad}
+
+\part{Hash}
+\include{hash}
+\include{colisoes}
+\include{analise-hash}
+\include{exercicios-hash}
+
+\part{Árvores de Busca}
+\include{abb}
+\include{avl}
+\include{btree}
+\include{rbtree}
+
+\appendix
+
+
+\end{document}

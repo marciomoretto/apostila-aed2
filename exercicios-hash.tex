@@ -1,0 +1,47 @@
+\chapter{Exercícios}
+
+\begin{exercicio}
+Considere uma tabela de dispersão com $m = 13$ posições e $n = 9$ elementos.
+\begin{enumerate}
+  \item Calcule o fator de carga $\alpha$.
+  \item Supondo uso de encadeamento, qual é o comprimento médio das listas?
+  \item O que aconteceria com $\alpha$ e com o desempenho das operações se inserirmos mais 10 elementos sem aumentar o tamanho da tabela?
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Explique o papel da função de hash no desempenho das tabelas de dispersão.
+\begin{enumerate}
+  \item O que significa dizer que uma função de hash é “uniforme”?
+  \item Dê um exemplo simples de função de hash não uniforme e explique por que ela pode causar degradação de desempenho.
+  \item Qual a relação entre a qualidade da função de hash e o pior caso de busca?
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Compare as estratégias de resolução de colisão.
+\begin{enumerate}
+  \item Descreva a diferença entre encadeamento e endereçamento aberto com sondagem linear.
+  \item Por que o encadeamento é considerado mais robusto em cenários de alto fator de carga?
+  \item O que é \emph{clustering primário} e como ele afeta a sondagem linear?
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Considere um sistema com sondagem linear e fator de carga $\alpha = 0{,}75$.
+\begin{enumerate}
+  \item Estime o custo médio de uma busca bem-sucedida e uma mal-sucedida com base nas fórmulas de Knuth (não é necessário justificar a fórmula).
+  \item E se $\alpha = 0{,}95$?
+  \item Por que o controle de $\alpha$ é mais crítico em sondagem linear do que em encadeamento?
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Analise os seguintes cenários de desempenho:
+\begin{enumerate}
+  \item Qual é o custo médio da busca bem-sucedida em encadeamento com $\alpha = 3$?
+  \item Qual é o pior caso para busca usando qualquer método de dispersão?
+  \item Explique como o uso de rehashing pode garantir que o custo médio de busca permaneça constante.
+\end{enumerate}
+\end{exercicio}
+

@@ -1,0 +1,63 @@
+1) O que esperar do curso
+* bibliografia
+* plano do curso
+* notas
+* TAD
+* TAD dicionário
+* tipos de dicionário
+
+2) Tabelas de Dispersão e Funções de Hash
+* conceito
+* função de hash
+* fator de carga
+* aplicações: frequencia, duplicata, dicionário, 
+
+3) Colisões
+* encadeamento
+* linear probing
+* quadratic probing (só comentar)
+* double hash (só comentar)
+
+4) Desempenho e Lista
+* pior caso
+* caso médio
+* rehashing
+* lista
+
+5) prova 1
+
+6) Árvores Binárias de Busca
+* definição
+* implementação
+* dicionário ordenado
+
+7) Árvores Balanceadas (AVL)
+
+8) Árvores B
+
+9) Árvores Vermelho/Preto e Lista
+
+10) Prova
+
+11) Grafos
+* conceitos e definições
+* exemplos de aplicações
+
+12) Busca
+* BFS
+* DFS
+
+13) Caminhos Mínimos
+* Djikstra
+* Bellman-Ford
+
+14) Árvores Geradoras Mínimas
+* Teorema do corte
+* Kruskal
+* Prim
+
+15) Prova
+
+16) Prova sub
+
+17) Prova rec

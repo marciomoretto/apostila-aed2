@@ -1,0 +1,469 @@
+\chapter{Resolução de Colisões}
+
+Como vimos anteriormente, uma função de hash associa uma chave a uma posição em uma tabela, idealmente de forma uniforme e eficiente. 
+No entanto, mesmo com boas funções de hash e tabelas com fator de carga controlado, colisões são inevitáveis: duas ou mais chaves diferentes podem ser mapeadas para o mesmo índice.
+
+Essas colisões não indicam erro ou falha do algoritmo -- são uma consequência natural do mapeamento de um conjunto potencialmente muito grande de chaves em um espaço fixo de posições. 
+A ocorrência de colisões exige que a implementação da tabela de dispersão adote estratégias específicas para resolvê-las. 
+O objetivo destas estratégias é garantir que operações como inserção, busca e remoção continuem eficientes, mesmo quando múltiplas chaves disputam o mesmo espaço.
+
+Neste capítulo, vamos estudar as principais abordagens para lidar com colisões: encadeamento ({\em chaining}), que utiliza listas para armazenar múltiplos elementos em uma mesma posição, e endereçamento aberto ({\em probing}), que busca novas posições disponíveis na própria tabela. 
+Analisaremos o funcionamento de cada técnica, suas vantagens, limitações e os impactos que causam no desempenho da tabela.
+
+\section{Encadeamento (Chaining)}
+
+Uma das formas mais comuns de lidar com colisões em tabelas de dispersão é por meio do encadeamento. 
+A ideia central dessa abordagem é permitir que múltiplos elementos ocupem a mesma posição da tabela, armazenando-os em uma estrutura auxiliar associada a cada índice -- geralmente, uma lista.
+
+Em vez de restringir cada posição da tabela a conter no máximo um único elemento, o encadeamento permite que cada posição funcione como um ``balde'', onde várias chaves com o mesmo valor de hash podem ser inseridas. 
+Assim, quando ocorre uma colisão, o novo elemento simplesmente é adicionado à lista existente naquele índice.
+
+Por exemplo, se duas chaves diferentes forem mapeadas para a mesma posição pela função de hash, ambas serão armazenadas na lista associada àquela posição. 
+A operação de busca percorre essa lista em busca da chave desejada; a inserção adiciona um novo elemento à lista; e a remoção procura pela chave e a elimina, se presente.
+
+Essa abordagem é especialmente eficaz quando a função de hash distribui bem as chaves e o fator de carga da tabela permanece controlado. 
+No entanto, se muitas colisões ocorrerem em um mesmo índice, a lista associada pode crescer, e o desempenho se degradar.
+
+A seguir, veremos como essa estratégia é implementada e analisaremos seu impacto sobre o desempenho das operações básicas.
+
+\subsection*{Estrutura de dados}
+
+Na estratégia de encadeamento, cada posição da tabela de dispersão aponta para o início de uma lista ligada. 
+Cada elemento dessa lista armazena um \textbf{par chave-valor}, além de um ponteiro para o próximo elemento.
+
+Para isso, usamos duas estruturas em \texttt{C}:
+
+\begin{lstlisting}[language=C, caption={Estrutura de um nó da lista encadeada}]
+typedef struct No {
+    char* chave;
+    int valor;
+    struct No* prox;
+} No;
+\end{lstlisting}
+
+Essa estrutura representa um elemento armazenado em uma das listas. 
+Ela contém:
+
+\begin{itemize}
+  \item \texttt{chave}: a chave do par (usamos \texttt{char*} para permitir chaves do tipo string),
+  \item \texttt{valor}: o valor associado à chave (neste exemplo, um inteiro),
+  \item \texttt{prox}: ponteiro para o próximo elemento da lista.
+\end{itemize}
+
+A tabela em si é representada por um vetor de ponteiros para \texttt{No}, encapsulado em uma estrutura \texttt{Dicionario}:
+
+\begin{lstlisting}[language=C, caption={Estrutura do dicionário com tabela de dispersão}]
+typedef struct {
+    No* tabela[TAM];
+} Dicionario;
+\end{lstlisting}
+
+Aqui, \texttt{TAM} é o tamanho da tabela (escolhido previamente). 
+Cada entrada da tabela aponta para o início de uma lista de colisões -- ou é \texttt{NULL} se estiver vazia.
+
+\subsection*{Função \texttt{criar}}
+
+A função \texttt{criar} aloca dinamicamente uma estrutura do tipo \texttt{Dicionario} e inicializa todas as posições da tabela com o valor \texttt{NULL}, indicando que nenhuma chave foi inserida ainda. 
+Cada posição da tabela está pronta para receber uma lista de colisões quando necessário.
+
+\begin{lstlisting}[language=C, caption={Criação de um dicionário vazio}]
+Dicionario* criar() {
+    Dicionario* d = malloc(sizeof(Dicionario));
+    for (int i = 0; i < TAM; i++)
+        d->tabela[i] = NULL;
+    return d;
+}
+\end{lstlisting}
+
+Essa função:
+
+\begin{itemize}
+  \item Aloca memória para um novo dicionário;
+  \item Inicializa todas as entradas da tabela com \texttt{NULL}, ou seja, listas vazias;
+  \item Retorna um ponteiro para a estrutura recém-criada.
+\end{itemize}
+
+A tabela resultante está pronta para que as operações de inserção, remoção e busca sejam aplicadas. 
+O tamanho da tabela, definido pela constante \texttt{TAM}, determina o número de ``baldes'' disponíveis para armazenar listas de colisões.
+
+\subsection*{Função \texttt{inserir}}
+
+A função \texttt{inserir(d, k, v)} insere o par \texttt{(k, v)} no dicionário \texttt{d}. 
+Para isso, aplica a função de hash à chave \texttt{k} para determinar a posição na tabela, e então insere o par na lista ligada correspondente.
+
+Se a chave \texttt{k} já estiver presente na lista, seu valor é atualizado.
+
+\begin{lstlisting}[language=C, caption={Inserção de um par (k, v) na tabela}]
+void inserir(Dicionario* d, const char* k, int v) {
+    unsigned int h = hash(k);
+    No* atual = d->tabela[h];
+
+    while (atual != NULL) {
+        if (strcmp(atual->chave, k) == 0) {
+            atual->valor = v;  // substitui o valor existente
+            return;
+        }
+        atual = atual->prox;
+    }
+
+    // cria novo nó e insere no início da lista
+    No* novo = malloc(sizeof(No));
+    novo->chave = strdup(k);
+    novo->valor = v;
+    novo->prox = d->tabela[h];
+    d->tabela[h] = novo;
+}
+\end{lstlisting}
+
+Essa função realiza os seguintes passos:
+
+\begin{itemize}
+  \item Aplica a função de hash à chave \texttt{k} para obter a posição \texttt{h} na tabela;
+  \item Percorre a lista encadeada na posição \texttt{h} em busca de uma chave igual;
+  \item Se encontrar, substitui o valor antigo por \texttt{v};
+  \item Caso contrário, cria um novo nó e o insere no início da lista.
+\end{itemize}
+
+Inserir no início da lista é eficiente e não afeta a corretude, já que a ordem dos elementos na lista não é relevante para a tabela de dispersão.
+
+\subsection*{Função \texttt{buscar}}
+
+A função \texttt{buscar(d, k)} procura pela chave \texttt{k} no dicionário \texttt{d}. 
+Aplica-se a função de hash à chave para localizar a lista correspondente e percorre-se essa lista à procura de um nó cuja chave seja igual a \texttt{k}. 
+Se encontrado, retorna-se um ponteiro para o valor associado; caso contrário, retorna-se \texttt{NULL}.
+
+\begin{lstlisting}[language=C, caption={Busca de uma chave na tabela}]
+int* buscar(Dicionario* d, const char* k) {
+    unsigned int h = hash(k);
+    No* atual = d->tabela[h];
+
+    while (atual != NULL) {
+        if (strcmp(atual->chave, k) == 0)
+            return &atual->valor;
+        atual = atual->prox;
+    }
+    return NULL;
+}
+\end{lstlisting}
+
+Essa função:
+
+\begin{itemize}
+  \item Aplica a função de hash à chave \texttt{k} para obter a posição \texttt{h};
+  \item Percorre a lista encadeada na posição \texttt{h};
+  \item Se encontrar um nó com chave igual a \texttt{k}, retorna o endereço do campo \texttt{valor};
+  \item Se não encontrar, retorna \texttt{NULL}.
+\end{itemize}
+
+Como o valor retornado é um ponteiro, o usuário da função pode tanto ler quanto modificar diretamente o valor associado à chave.
+
+\subsection*{Função \texttt{remover}}
+
+A função \texttt{remover(d, k)} remove do dicionário \texttt{d} o par cuja chave é \texttt{k}, caso ele exista. Para isso, aplica-se a função de hash à chave para localizar a lista apropriada e percorre-se essa lista à procura do nó correspondente. Ao encontrar o nó, ele é retirado da lista e sua memória é liberada.
+
+\begin{lstlisting}[language=C, caption={Remoção de uma chave da tabela}]
+void remover(Dicionario* d, const char* k) {
+    unsigned int h = hash(k);
+    No* atual = d->tabela[h];
+    No* anterior = NULL;
+
+    while (atual != NULL) {
+        if (strcmp(atual->chave, k) == 0) {
+            if (anterior == NULL)
+                d->tabela[h] = atual->prox;
+            else
+                anterior->prox = atual->prox;
+            free(atual->chave);
+            free(atual);
+            return;
+        }
+        anterior = atual;
+        atual = atual->prox;
+    }
+}
+\end{lstlisting}
+
+Essa função realiza os seguintes passos:
+
+\begin{itemize}
+  \item Aplica a função de hash à chave \texttt{k} para determinar a posição \texttt{h};
+  \item Percorre a lista encadeada na posição \texttt{h}, mantendo um ponteiro para o nó atual e outro para o anterior;
+  \item Se encontrar a chave, remove o nó da lista (ajustando os ponteiros) e libera a memória alocada para a chave e para o nó;
+  \item Se a chave não for encontrada, a função não faz nada.
+\end{itemize}
+
+A presença do ponteiro \texttt{anterior} é essencial para que seja possível remover nós que não estejam na primeira posição da lista.
+
+\section{Endereçamento Aberto (Probing)}
+
+A segunda abordagem clássica para lidar com colisões em tabelas de dispersão é o \textbf{endereçamento aberto} (ou \textit{probing}). 
+Diferentemente do encadeamento, onde cada posição da tabela pode armazenar uma lista de elementos, no endereçamento aberto toda a informação é armazenada diretamente no vetor da tabela, sem o uso de listas auxiliares.
+
+Quando ocorre uma colisão -- isto é, quando a posição indicada pela função de hash já está ocupada -- o algoritmo busca uma \textbf{outra posição livre} dentro da própria tabela, de acordo com uma sequência determinada por uma regra de sondagem (o \textit{probe}).
+
+A ideia é simples: em vez de manter múltiplos elementos por posição, o algoritmo tenta encontrar uma nova posição onde o par chave-valor possa ser inserido. 
+Essa busca por uma nova posição segue uma ordem bem definida, que depende da técnica de probing utilizada (como sondagem linear, quadrática ou duplo hashing).
+
+O mesmo procedimento é adotado para realizar buscas e remoções: a função de hash fornece a posição inicial, e a sequência de probing é seguida até encontrar a chave desejada ou uma posição vazia que indique sua ausência.
+
+Essa estratégia evita a alocação dinâmica de memória e torna a estrutura mais compacta, mas depende de que a tabela tenha \textbf{espaço disponível}, ou seja, seu fator de carga deve ser mantido abaixo de um certo limite para garantir bom desempenho.
+
+É importante observar que, no endereçamento aberto, o fator de carga da tabela deve ser estritamente menor que $1$. 
+Como não há listas auxiliares, todos os elementos precisam estar contidos diretamente na tabela. 
+Se a tabela estiver completamente cheia, não é possível inserir novos elementos, independentemente da estratégia de sondagem utilizada.
+
+Essa restrição não existe no caso do encadeamento, onde cada posição da tabela pode armazenar múltiplos elementos por meio de listas. 
+Lá, o fator de carga pode inclusive ultrapassar $1$ -- embora, nesse caso, o desempenho possa piorar progressivamente.
+
+Por isso, ao utilizar probing, é fundamental manter o fator de carga sob controle -- muitas implementações realocam ({\em rehash}) a tabela automaticamente ao atingir, por exemplo, $70\%$ de ocupação.
+
+A forma mais simples de sondagem é a chamada \textbf{sondagem linear} (\textit{linear probing}). 
+Nesse método, ao detectar uma colisão na posição $h$, verifica-se sequencialmente as posições $h+1$, $h+2$, $h+3$, e assim por diante (com aritmética modular), até encontrar uma posição vazia ou a chave procurada. 
+Essa estratégia é fácil de implementar e eficiente com fator de carga baixo, mas pode causar aglomeração de elementos (\textit{clustering}), o que degrada o desempenho das operações.
+
+Além da sondagem linear, existem outras estratégias, como a \textbf{sondagem quadrática} e o \textbf{duplo hashing}, que serão apresentadas brevemente ao final desta seção.
+
+\subsection*{Função \texttt{criar}}
+
+A função \texttt{criar} aloca uma estrutura de tabela de dispersão usando endereçamento aberto com sondagem linear. 
+Como não há listas auxiliares, a tabela é simplesmente um vetor de ponteiros para pares chave-valor. 
+Cada posição começa como \texttt{NULL}, indicando que está livre.
+
+A estrutura usada é levemente diferente da versão com encadeamento: agora, armazenamos diretamente os pares no vetor. Para isso, usamos a seguinte definição:
+
+\begin{lstlisting}[language=C, caption={Estrutura do par chave-valor com marcador de ocupação}]
+typedef struct {
+    char* chave;
+    int valor;
+} Entrada;
+
+typedef struct {
+    Entrada* tabela[TAM];
+} Dicionario;
+\end{lstlisting}
+
+Note que o vetor contém ponteiros para \texttt{Entrada}. 
+Uma posição \texttt{NULL} indica que está livre. Para marcação de remoções (discutida depois), pode-se usar um valor especial (como um ponteiro constante) para distinguir entre posição nunca usada e posição já removida.
+
+A função de criação inicializa todas as posições com \texttt{NULL}:
+
+\begin{lstlisting}[language=C, caption={Criação de tabela com sondagem linear}]
+Dicionario* criar() {
+    Dicionario* d = malloc(sizeof(Dicionario));
+    for (int i = 0; i < TAM; i++)
+        d->tabela[i] = NULL;
+    return d;
+}
+\end{lstlisting}
+
+Essa estrutura prepara o dicionário para operar com sondagem linear: cada inserção buscará uma posição livre, e cada busca percorrerá posições sucessivas até encontrar a chave ou uma posição vazia.
+
+\subsection*{Função \texttt{inserir}}
+
+A função \texttt{inserir(d, k, v)} aplica a função de hash à chave \texttt{k} e, em caso de colisão, procura a próxima posição livre na tabela, avançando sequencialmente até encontrar uma posição disponível ou uma chave já existente (caso em que o valor é substituído).
+
+\begin{lstlisting}[language=C, caption={Inserção com sondagem linear}]
+void inserir(Dicionario* d, const char* k, int v) {
+    unsigned int h = hash(k);
+    for (int i = 0; i < TAM; i++) {
+        int pos = (h + i) % TAM;
+        Entrada* e = d->tabela[pos];
+
+        if (e == NULL) {
+            // posição livre: inserir nova entrada
+            e = malloc(sizeof(Entrada));
+            e->chave = strdup(k);
+            e->valor = v;
+            d->tabela[pos] = e;
+            return;
+        }
+
+        if (strcmp(e->chave, k) == 0) {
+            // chave já presente: substituir valor
+            e->valor = v;
+            return;
+        }
+    }
+
+    // tabela cheia (fator de carga >= 1)
+    printf("Erro: tabela cheia.\n");
+}
+\end{lstlisting}
+
+Essa função:
+
+\begin{itemize}
+  \item Calcula a posição inicial com a função de hash;
+  \item Verifica sequencialmente as posições seguintes (com aritmética modular);
+  \item Insere o par na primeira posição livre encontrada;
+  \item Se a chave já existir, substitui o valor antigo;
+  \item Se nenhuma posição estiver livre, exibe uma mensagem de erro.
+\end{itemize}
+
+\subsection*{Função \texttt{buscar}}
+
+A função \texttt{buscar(d, k)} procura pela chave \texttt{k} na tabela usando sondagem linear. 
+A partir da posição fornecida pela função de hash, percorre-se sequencialmente a tabela até encontrar a chave ou até chegar a uma posição vazia -- o que indica que a chave não está presente.
+
+\begin{lstlisting}[language=C, caption={Busca com sondagem linear}]
+int* buscar(Dicionario* d, const char* k) {
+    unsigned int h = hash(k);
+    for (int i = 0; i < TAM; i++) {
+        int pos = (h + i) % TAM;
+        Entrada* e = d->tabela[pos];
+
+        if (e == NULL)
+            return NULL; // posição nunca usada: chave não está na tabela
+
+        if (strcmp(e->chave, k) == 0)
+            return &e->valor; // chave encontrada
+    }
+
+    return NULL; // chave não encontrada após varrer toda a tabela
+}
+\end{lstlisting}
+
+Essa função:
+
+\begin{itemize}
+  \item Calcula a posição inicial com a função de hash;
+  \item Percorre posições consecutivas, segundo a regra da sondagem linear;
+  \item Interrompe se encontrar a chave procurada ou uma posição nunca usada;
+  \item Retorna um ponteiro para o valor correspondente, ou \texttt{NULL} se a chave não for encontrada.
+\end{itemize}
+
+A verificação de posição vazia é essencial para determinar que a chave não está na tabela. 
+Isso é possível porque posições nunca utilizadas são inicializadas como \texttt{NULL} na criação do dicionário.
+
+\subsection*{Função \texttt{remover}}
+
+A operação de remoção em tabelas com sondagem linear exige cuidado: ao remover uma entrada, \textbf{não podemos simplesmente colocar \texttt{NULL}} na posição, pois isso interromperia buscas por chaves que foram inseridas após uma colisão e deslocadas para posições seguintes.
+
+Para contornar esse problema, usamos um marcador especial para indicar que a posição foi ocupada no passado mas está \textbf{atualmente removida}. 
+Um valor comum para isso é um ponteiro constante, que nunca será confundido com uma entrada válida nem com \texttt{NULL}:
+
+\begin{lstlisting}[language=C, caption={Marcador especial para posição removida}]
+#define REMOVIDO ((Entrada*) -1)
+\end{lstlisting}
+
+Com isso, a função de remoção pode ser implementada da seguinte forma:
+
+\begin{lstlisting}[language=C, caption={Remoção com sondagem linear}]
+void remover(Dicionario* d, const char* k) {
+    unsigned int h = hash(k);
+    for (int i = 0; i < TAM; i++) {
+        int pos = (h + i) % TAM;
+        Entrada* e = d->tabela[pos];
+
+        if (e == NULL)
+            return; // posição nunca usada: chave não está na tabela
+
+        if (e != REMOVIDO && strcmp(e->chave, k) == 0) {
+            free(e->chave);
+            free(e);
+            d->tabela[pos] = REMOVIDO;
+            return;
+        }
+    }
+}
+\end{lstlisting}
+
+Essa função:
+
+\begin{itemize}
+  \item Aplica a função de hash à chave;
+  \item Percorre a tabela segundo a sondagem linear;
+  \item Se encontrar a chave, libera sua memória e marca a posição como \texttt{REMOVIDO};
+  \item Se encontrar uma posição \texttt{NULL}, termina a busca (a chave não está presente).
+\end{itemize}
+
+Ao marcar a posição como \texttt{REMOVIDO}, mantemos o funcionamento correto das buscas futuras, que devem continuar além dessa posição ao procurar por chaves deslocadas por colisão.
+
+Na prática, também é possível reaproveitar posições marcadas como \texttt{REMOVIDO} durante inserções -- o que melhora o uso do espaço --, mas essa otimização não está incluída aqui para manter o código simples.
+
+\subsection*{Outras formas de sondagem}
+
+A sondagem linear é simples e eficiente enquanto o fator de carga da tabela permanece baixo. 
+No entanto, ela sofre de um problema conhecido como \textbf{clustering primário}. 
+Esse fenômeno ocorre quando várias chaves colidem na mesma região da tabela e passam a ocupar posições consecutivas.
+
+Como a sondagem linear sempre verifica posições adjacentes em caso de colisão, uma sequência de elementos tende a crescer como um bloco contínuo. 
+Quando novas colisões ocorrem, é mais provável que elas aconteçam dentro desse bloco -- o que aumenta o número médio de tentativas necessárias para inserção e busca. 
+Esse acúmulo progressivo de elementos em regiões contíguas da tabela pode degradar o desempenho da estrutura significativamente, mesmo quando a tabela ainda não está cheia.
+
+Para reduzir esse efeito, foram propostas estratégias de sondagem que espalham melhor as colisões pela tabela. 
+As duas mais conhecidas são a \textbf{sondagem quadrática} e o \textbf{duplo hashing}.
+
+Na \textbf{sondagem quadrática}, as posições alternativas são calculadas com base em deslocamentos quadráticos em relação à posição original. 
+Ou seja, se a função de hash retorna a posição $h$, as próximas posições a serem testadas são:
+
+\[
+h + 1^2, \quad h + 2^2, \quad h + 3^2, \quad \ldots
+\]
+
+Em termos práticos, a $i$-ésima tentativa verifica a posição $(h + i^2) \bmod m$, onde $m$ é o tamanho da tabela. 
+Essa estratégia evita a formação de \textit{clusters} lineares como ocorre na sondagem linear, pois espaça mais as tentativas e distribui os elementos de maneira mais uniforme.
+
+No entanto, a sondagem quadrática apresenta duas limitações importantes:
+
+\begin{itemize}
+  \item Nem sempre garante que todas as posições da tabela serão visitadas, o que pode impedir a inserção de novos elementos mesmo antes de a tabela estar completamente cheia.
+  \item Requer que o tamanho da tabela obedeça a certas propriedades (como ser um número primo ou uma potência de dois com ajustes) para garantir boa cobertura.
+\end{itemize}
+
+O \textbf{duplo hashing} utiliza uma segunda função de hash para definir o deslocamento entre uma tentativa e outra. 
+A sequência de posições testadas é dada por:
+
+\[
+h + i \cdot h_2(k) \bmod m
+\]
+
+onde $h$ é o valor da primeira função de hash, $h_2(k)$ é a segunda função de hash aplicada à chave $k$, e $i$ é o número da tentativa.
+
+A principal vantagem do duplo hashing é a sua capacidade de distribuir as colisões de forma menos previsível e mais uniforme pela tabela, reduzindo significativamente o problema do \textit{clustering}. 
+Além disso, com uma boa escolha da segunda função de hash (por exemplo, garantindo que ela nunca retorne zero), o método pode percorrer toda a tabela antes de repetir posições.
+
+A desvantagem é que o cálculo da segunda função de hash pode aumentar o custo computacional das operações, além de exigir maior cuidado no projeto das funções para evitar ciclos ou repetições.
+
+Essas técnicas são especialmente úteis quando se deseja melhorar o desempenho de tabelas com fator de carga mais alto, desde que a tabela seja redimensionada adequadamente antes de atingir a saturação.
+
+\subsection*{Clustering}
+
+Para ilustrar o problema do \textit{clustering} e comparar as estratégias de sondagem, realizamos um experimento empírico utilizando as palavras distintas extraídas do livro \textit{O Arquipélago Gulag}, de Aleksandr Soljenítsin. 
+O total de palavras distintas foi de 22.077, e elas foram inseridas em uma tabela de dispersão de tamanho $m = 50.000$ utilizando três métodos distintos: sondagem linear, sondagem quadrática e duplo hashing.
+
+Usamos a função de hash polinomial com base 31 para calcular a posição inicial de cada palavra. 
+No caso do duplo hashing, uma segunda função de hash foi obtida aplicando novamente a função polinomial à chave original.
+
+Após a inserção de todas as palavras, analisamos a distribuição das posições ocupadas na tabela. 
+Em particular, medimos o número de blocos consecutivos de posições ocupadas com comprimento superior a certos limiares (10, 20, 30, 40 e 50 posições). 
+Os resultados obtidos estão resumidos na tabela a seguir:
+
+\begin{center}
+\begin{tabular}{lrrrrr}
+\hline
+\textbf{Método} & \textbf{$>$10} & \textbf{$>$20} & \textbf{$>$30} & \textbf{$>$40} & \textbf{$>$50} \\
+\hline
+Sondagem Linear      & 140 & 41 & 18 & 12 & 8 \\
+Sondagem Quadrática  & 138 & 27 & 7  & 6  & 4 \\
+Duplo Hashing        &  85 &  3 & 0  & 0  & 0 \\
+\hline
+\end{tabular}
+\end{center}
+
+Os resultados demonstram de forma clara o impacto do \textit{clustering primário} na sondagem linear. 
+Mesmo com fator de carga abaixo de 50\%, esse método produziu diversos blocos com mais de 50 posições consecutivas ocupadas, tornando a tabela densamente preenchida em certas regiões.
+
+A sondagem quadrática melhora essa situação, reduzindo significativamente o número de blocos longos, embora ainda apresente alguma aglomeração local. 
+Já o duplo hashing praticamente elimina o fenômeno: não se observa nenhum bloco com mais de 30 posições consecutivas ocupadas, indicando uma distribuição muito mais uniforme e eficiente.
+
+A estratégia adotada para lidar com colisões varia entre linguagens de programação e suas bibliotecas padrão. 
+No caso da linguagem \textbf{Java}, a classe \texttt{HashMap} utiliza por padrão a técnica de \textbf{encadeamento} (\textit{chaining}), armazenando listas de pares chave-valor em cada posição da tabela. 
+Desde o Java 8, quando uma lista encadeada cresce além de um certo limite (por padrão, 8 elementos), ela é automaticamente convertida em uma árvore balanceada (veremos isso nos capítulos adjacentes), melhorando o desempenho no pior caso\footnote{\url{https://www.javapedia.net/Map-and-its-implementations/2606}}. 
+
+Em contraste, a linguagem \textbf{Python} implementa seus dicionários (\texttt{dict}) e conjuntos (\texttt{set}) com base em \textbf{endereçamento aberto} (\textit{open addressing}), resolvendo colisões por meio de \textbf{sondagem linear modificada}. 
+A partir da versão 3.6, os dicionários passaram a preservar a ordem de inserção dos pares chave-valor, sem alterar o mecanismo fundamental de resolução de colisões.
+
+A implementação do \texttt{dict} em CPython utiliza deslocamentos calculados a partir do hash da chave, com ajustes dinâmicos e política de inserção que favorece a ocupação de posições mais próximas à posição ideal. 
+Essa abordagem é inspirada em técnicas como o \textit{robin hood hashing}, nas quais elementos com maior ``idade de inserção'' podem ser mantidos em posições melhores em detrimento de elementos mais recentes. 
+Essa estratégia melhora a distribuição das colisões, reduz o \textit{clustering} primário e favorece a localidade de memória, contribuindo para o desempenho eficiente mesmo sob fatores de carga elevados.

@@ -1,0 +1,325 @@
+\chapter{Árvores Binárias de Busca}
+
+Uma \textbf{árvore binária} é uma estrutura de dados hierárquica em que cada elemento, chamado de \emph{nó}, possui no máximo dois filhos: um à esquerda e outro à direita. 
+Como nas tabelas de dispersão, cada nó pode conter uma chave (e eventualmente um valor associado), além de ponteiros para seus filhos esquerdo e direito. 
+A estrutura é naturalmente recursiva: cada subárvore também é uma árvore binária.
+
+As chaves em uma ABB devem ser \textbf{comparáveis} -- ou seja, é necessário poder determinar se uma chave é menor, igual ou maior que outra. 
+Essa exigência é fundamental porque a estrutura da ABB depende de comparações para decidir a posição de cada chave.
+
+\begin{center}
+\noindent\fbox{%
+    \parbox{0.95\textwidth}{%
+        \textbf{Propriedade fundamental das ABBs:} Para cada nó com chave $k$, todas as chaves da \emph{subárvore esquerda} devem ser \emph{estritamente menores} que $k$, e todas as chaves da \emph{subárvore direita} devem ser \emph{estritamente maiores} que $k$.
+    }
+}
+\end{center}
+
+
+Essa organização garante que um percurso em ordem (esquerda $\rightarrow$ raiz $\rightarrow$ direita) produza as chaves em ordem crescente, o que permite a implementação eficiente de operações como busca, inserção, remoção e iteração ordenada.
+ O fato de que as chaves são comparáveis torna possível usar ABBs para implementar um dicionário ordenado, em que é possível não apenas recuperar valores associados a chaves específicas, mas também navegar pelas chaves em ordem, encontrar o menor ou maior elemento, ou consultar faixas de valores.
+
+
+As ABBs são utilizadas em contextos onde a ordenação é importante ou onde há necessidade de navegação eficiente por faixas de valores. Exemplos comuns incluem:
+
+\begin{itemize}
+  \item Implementação de \textbf{dicionários ordenados}
+  \item Sistemas de \textbf{banco de dados} que requerem ordenação ou busca por intervalo
+  \item \textbf{Sistemas de arquivos}, para indexação de nomes ou blocos
+  \item Estruturas auxiliares em algoritmos de compressão, compiladores e engines de jogos
+\end{itemize}
+
+\section{Estrutura}
+
+Uma árvore binária de busca é composta por nós que armazenam três informações principais:
+
+\begin{itemize}
+  \item uma \textbf{chave}, usada para determinar a posição do nó na árvore com base em comparações;
+  \item um \textbf{valor} associado à chave, como em um dicionário;
+  \item dois ponteiros, para os \textbf{filhos esquerdo e direito}.
+\end{itemize}
+
+Em C, essa estrutura pode ser representada por um \texttt{struct} da seguinte forma:
+
+\begin{lstlisting}[language=C, caption={Estrutura de um nó de ABB}]
+typedef struct no {
+    int chave;
+    void* valor;
+    struct no* esq;
+    struct no* dir;
+} No;
+\end{lstlisting}
+
+O campo \texttt{chave} é usado para comparações, o campo \texttt{valor} pode apontar para qualquer tipo de dado associado, e os campos \texttt{esq} e \texttt{dir} representam, respectivamente, os filhos à esquerda e à direita do nó.
+
+O ponteiro para a raiz da árvore representa a ABB como um todo. 
+Todas as operações -- como busca, inserção e remoção -- são executadas a partir desse ponteiro, percorrendo a árvore com base na comparação das chaves.
+
+Essa estrutura recursiva permite representar árvores de qualquer tamanho, e sua organização garante que operações fundamentais possam ser implementadas de forma eficiente.
+
+\section{Função {\tt buscar}}
+
+Dada uma árvore binária de busca e uma chave, a operação de \texttt{buscar} percorre a árvore a partir da raiz comparando a chave desejada com a chave do nó atual:
+
+\begin{itemize}
+  \item Se a chave for igual à do nó atual, o valor associado é retornado.
+  \item Se for menor, a busca continua na subárvore esquerda.
+  \item Se for maior, a busca continua na subárvore direita.
+\end{itemize}
+
+A seguir apresentamos a \textbf{versão recursiva} do algoritmo. 
+Também é possível implementar a operação de forma iterativa, com uma estrutura de repetição.
+
+\begin{lstlisting}[language=C, caption={Busca recursiva em ABB}]
+void* buscar(No* raiz, int chave) {
+    if (raiz == NULL)
+        return NULL;
+    if (chave == raiz->chave)
+        return raiz->valor;
+    if (chave < raiz->chave)
+        return buscar(raiz->esq, chave);
+    else
+        return buscar(raiz->dir, chave);
+}
+\end{lstlisting}
+
+
+O tempo de execução da operação de busca em uma árvore binária de busca é proporcional à altura da árvore. 
+Em outras palavras, a busca sempre toma tempo $\Theta(h)$, onde $h$ representa a \textbf{altura da árvore}.
+
+A altura de uma árvore é definida como o número de arestas no caminho mais longo entre a raiz e uma folha. 
+Em uma árvore com apenas um único nó (a raiz), a altura é zero. 
+Se a árvore tem dois níveis, com a raiz e dois filhos diretos, sua altura é 1. 
+Intuitivamente, quanto mais ``profunda'' for a árvore, maior será a quantidade de comparações necessárias em uma busca.
+
+No \textbf{pior caso}, a altura $h$ pode ser igual a $n - 1$, quando a árvore está completamente desbalanceada -- por exemplo, quando todas as chaves são inseridas em ordem crescente ou decrescente. 
+Nessa situação, a árvore degenera em uma lista encadeada, e a busca tem complexidade $\Theta(n)$.
+
+No \textbf{caso médio}, assumimos -- para fins de análise teórica - que as chaves são inseridas em ordem aleatória e com distribuição aproximadamente uniforme. 
+Sob essa hipótese, a árvore resultante tende a ficar razoavelmente equilibrada.
+
+Em uma árvore binária perfeitamente equilibrada, cada nível da árvore contém o dobro de nós do nível anterior:
+\begin{itemize}
+  \item nível $0$ (a raiz): $1$ nó
+  \item nível $1$: até $2$ nós
+  \item nível $2$: até $4$ nós
+  \item nível $3$: até $8$ nós
+  \item \dots
+  \item nível $h$: até $2^h$ nós
+\end{itemize}
+
+Se somarmos o número total de nós da árvore até o nível $h$, temos:
+\[
+1 + 2 + 4 + \dots + 2^h = 2^{h+1} - 1
+\]
+
+Isso significa que uma árvore com altura $h$ pode conter até $2^{h+1} - 1$ nós. 
+Invertendo essa relação, o número de níveis necessário para acomodar $n$ nós é aproximadamente $\log_2 n$. 
+Assim, dizemos que uma árvore binária bem equilibrada tem altura $h = \Theta(\lg n)$.
+
+Ou seja, se assumirmos que a ordem de iserção de chaves em um ABB foi feita de maneira aleatória -- algo difícil de garantir na prática -- sua altura é $\Theta(lg(n))$ e, consequentemente, a operação de busca é $\Theta(lg(n))$.
+
+Portanto, embora a análise do caso médio sob inserção aleatória nos leve a uma altura logarítmica, essa não é uma suposição realista para aplicações em que os dados têm estrutura ou ordenação previsível. 
+Nessas situações, o desempenho pode se degradar para o pior caso, com altura $\Theta(n)$. 
+Para garantir bom desempenho independentemente da ordem de inserção, é necessário usar árvores com balanceamento automático que veremos mais a frente na apostila.
+
+
+\section{Função \texttt{inserir}}
+
+A operação de inserção em uma árvore binária de busca segue a mesma lógica da busca: percorremos a árvore comparando a nova chave com as chaves já presentes, até encontrar uma posição vazia (isto é, um ponteiro nulo) onde o novo nó deve ser inserido.
+
+Se a chave já existe na árvore, podemos optar por atualizar o valor associado. 
+Caso contrário, criamos um novo nó com a chave e o valor fornecidos, e o inserimos como filho de um nó existente.
+
+A seguir apresentamos a versão recursiva da inserção:
+
+\begin{lstlisting}[language=C, caption={Inserção recursiva em ABB}]
+No* inserir(No* raiz, int chave, void* valor) {
+    if (raiz == NULL) {
+        No* novo = malloc(sizeof(No));
+        novo->chave = chave;
+        novo->valor = valor;
+        novo->esq = NULL;
+        novo->dir = NULL;
+        return novo;
+    }
+
+    if (chave == raiz->chave)
+        raiz->valor = valor; // atualiza
+    else if (chave < raiz->chave)
+        raiz->esq = inserir(raiz->esq, chave, valor);
+    else
+        raiz->dir = inserir(raiz->dir, chave, valor);
+
+    return raiz;
+}
+\end{lstlisting}
+
+Assim como na busca, a complexidade da inserção depende da altura da árvore. 
+Em geral, a operação percorre o caminho da raiz até uma folha, realizando comparações até encontrar a posição correta.
+
+\section{Função \texttt{remover}}
+
+A operação de remoção em uma árvore binária de busca é mais complexa do que busca ou inserção, pois precisamos manter a propriedade de ordenação da árvore mesmo após retirar um nó.
+
+Dado um nó a ser removido, três situações podem ocorrer:
+
+\begin{enumerate}
+  \item O nó não tem filhos: basta removê-lo.
+  \item O nó tem apenas um filho: removemos o nó e conectamos seu filho diretamente ao pai.
+  \item O nó tem dois filhos: substituímos o conteúdo do nó pela menor chave da subárvore direita (ou, alternativamente, pela maior da subárvore esquerda), e então removemos essa chave auxiliar da subárvore correspondente.
+\end{enumerate}
+
+A seguir mostramos uma implementação recursiva usando o menor elemento da subárvore direita como substituto:
+
+\begin{lstlisting}[language=C, caption={Remoção recursiva em ABB}]
+No* remover(No* raiz, int chave) {
+    if (raiz == NULL)
+        return NULL;
+
+    if (chave < raiz->chave)
+        raiz->esq = remover(raiz->esq, chave);
+    else if (chave > raiz->chave)
+        raiz->dir = remover(raiz->dir, chave);
+    else {
+        // caso 1 e 2: zero ou um filho
+        if (raiz->esq == NULL) {
+            No* temp = raiz->dir;
+            free(raiz);
+            return temp;
+        }
+        if (raiz->dir == NULL) {
+            No* temp = raiz->esq;
+            free(raiz);
+            return temp;
+        }
+
+        // caso 3: dois filhos
+        No* sucessor = raiz->dir;
+        while (sucessor->esq != NULL)
+            sucessor = sucessor->esq;
+
+        raiz->chave = sucessor->chave;
+        raiz->valor = sucessor->valor;
+        raiz->dir = remover(raiz->dir, sucessor->chave);
+    }
+
+    return raiz;
+}
+\end{lstlisting}
+
+Vale destacar que, embora a remoção envolva lógica mais elaborada, seu custo assintótico é o mesmo das demais operações: ele depende unicamente da altura da árvore.
+
+\section{Menor e maior chave}
+
+Em um dicionário ordenado implementado com uma árvore binária de busca, é comum precisar encontrar a menor ou a maior chave presente na estrutura. 
+Essas operações são diretas graças à propriedade fundamental da ABB.
+
+\textbf{Menor chave:} a menor chave está no nó mais à esquerda da árvore. 
+Basta seguir os ponteiros para o filho esquerdo até encontrar um nó que não tenha filho à esquerda.
+
+\textbf{Maior chave:} a maior chave está no nó mais à direita da árvore. 
+O procedimento é simétrico ao anterior: seguimos os ponteiros para o filho direito até encontrar um nó sem filho à direita.
+
+\begin{lstlisting}[language=C, caption={Busca da menor chave em ABB}]
+No* minimo(No* raiz) {
+    if (raiz == NULL)
+        return NULL;
+    while (raiz->esq != NULL)
+        raiz = raiz->esq;
+    return raiz;
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=C, caption={Busca da maior chave em ABB}]
+No* maximo(No* raiz) {
+    if (raiz == NULL)
+        return NULL;
+    while (raiz->dir != NULL)
+        raiz = raiz->dir;
+    return raiz;
+}
+\end{lstlisting}
+
+Essas operações percorrem apenas um caminho da raiz até uma folha, o que leva tempo $\Theta(h)$, onde $h$ é a altura da árvore. 
+
+\section{Anterior e posterior}
+
+Em um dicionário ordenado, é útil localizar a chave imediatamente anterior ou posterior a uma dada chave. 
+Essas operações são chamadas de \textbf{predecessor} (anterior) e \textbf{sucessor} (posterior).
+
+Dado um nó com chave $k$, temos duas situações para cada uma dessas operações:
+
+\textbf{Anterior (predecessor):}
+
+\begin{itemize}
+  \item Se o nó tem subárvore esquerda, o predecessor é o maior nó dessa subárvore (ou seja, o mais à direita da subárvore esquerda).
+  \item Se o nó não tem subárvore esquerda, o predecessor está entre os ancestrais: é o último ancestral pelo qual passamos \textbf{descendo para a direita}.
+\end{itemize}
+
+\textbf{Posterior (sucessor):}
+
+\begin{itemize}
+  \item Se o nó tem subárvore direita, o sucessor é o menor nó dessa subárvore (isto é, o mais à esquerda da subárvore direita).
+  \item Se o nó não tem subárvore direita, o sucessor está entre os ancestrais: é o último ancestral pelo qual passamos \textbf{descendo para a esquerda}.
+\end{itemize}
+
+\textbf{Observação:} essas operações dependem do acesso direto ao nó cuja chave $k$ queremos usar como referência. 
+Se partimos apenas da raiz e conhecemos a chave $k$, precisamos primeiro localizar o nó correspondente com uma busca.
+
+A seguir, apresentamos uma versão recursiva que, a partir da raiz da árvore e de uma chave $k$, encontra o sucessor (posterior):
+
+\begin{lstlisting}[language=C, caption={Busca do sucessor em ABB}]
+No* sucessor(No* raiz, int chave) {
+    No* atual = raiz;
+    No* candidato = NULL;
+
+    while (atual != NULL) {
+        if (chave < atual->chave) {
+            candidato = atual;
+            atual = atual->esq;
+        } else {
+            atual = atual->dir;
+        }
+    }
+
+    return candidato;
+}
+\end{lstlisting}
+
+O algoritmo para o \texttt{predecessor} é análogo, trocando a lógica de comparação e os lados esquerdo/direito.
+
+Como todas as operações anteriores, essas operações percorrem um único caminho da raiz até uma folha, tomando tempo $\Theta(h)$, onde $h$ é a altura da árvore. 
+
+
+\section{Visita em ordem}
+
+Uma das principais vantagens de usar uma árvore binária de busca é que ela permite percorrer todas as chaves em ordem crescente de maneira simples e eficiente.
+
+O \textbf{percurso em ordem} (ou \emph{in-order traversal}) segue o seguinte padrão recursivo:
+
+\begin{enumerate}
+  \item Visita a subárvore esquerda;
+  \item Visita o nó atual;
+  \item Visita a subárvore direita.
+\end{enumerate}
+
+Esse padrão garante que as chaves sejam visitadas em ordem crescente, respeitando a propriedade estrutural da árvore binária de busca.
+
+A seguir, apresentamos uma função que percorre a árvore e aplica uma função passada como parâmetro a cada chave e valor:
+
+\begin{lstlisting}[language=C, caption={Percurso em ordem em ABB}]
+void visitar_em_ordem(No* raiz, void (*visitar)(int, void*)) {
+    if (raiz == NULL)
+        return;
+
+    visitar_em_ordem(raiz->esq, visitar);
+    visitar(raiz->chave, raiz->valor);
+    visitar_em_ordem(raiz->dir, visitar);
+}
+\end{lstlisting}
+
+Essa função é útil para exibir os elementos do dicionário ordenado, salvar os pares chave-valor em um vetor, ou realizar qualquer outra operação sequencial.
+
+A visita percorre todos os nós da árvore exatamente uma vez. 
+Assim, sua complexidade é sempre $\Theta(n)$, independentemente da forma da árvore. 
