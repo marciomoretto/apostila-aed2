@@ -1,0 +1,62 @@
+
+\documentclass[12pt,oneside]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{lmodern}
+
+\geometry{letterpaper,margin=2.5cm}
+
+% ---------- Environments ----------
+\newtheorem{exercicio}{Exercício}
+
+% ---------- Metadata ----------
+\title{Prova: Tabelas de Dispersão (Hashing)}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+
+\begin{exercicio}
+Considere uma tabela de dispersão com $m = 17$ posições e $n = 20$ elementos.
+\begin{enumerate}[label=\alph*)]
+  \item Calcule o fator de carga $\alpha$. Supondo uso de encadeamento, qual o comprimento médio das listas?
+  \item Se adotássemos endereçamento aberto com sondagem linear, o que aconteceria? 
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Analise a importância da escolha da função de hash.
+\begin{enumerate}[label=\alph*)]
+  \item Explique por que uma função de hash deve ser eficiente tanto em tempo de cálculo quanto em distribuição dos valores.
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Compare métodos de sondagem em endereçamento aberto.
+\begin{enumerate}[label=\alph*)]
+  \item Descreva a diferença entre sondagem linear, sondagem quadrática e hashing duplo.
+  \item Quais desses métodos tendem a reduzir o problema de \emph{clustering primário}? Explique.
+\end{enumerate}
+\end{exercicio}
+
+
+
+% ---------- (Opcional) Gabarito Resumido ----------
+%\chapter*{Gabarito Resumido}
+%\begin{enumerate}
+%  \item \textbf{Exercício 1:} (a) $\alpha = n/m = 20/17 \approx 1{,}176$; (b) comprimento médio $\approx \alpha$; (c) $\alpha>1$ inviável em endereçamento aberto, alto custo esperado $\Rightarrow$ rehashing.
+%  \item \textbf{Exercício 2:} Eficiência computacional + distribuição uniforme; exemplos: multiplicação (Knuth), misturas bitwise; uniformidade evita piores casos.
+%  \item \textbf{Exercício 3:} Linear: $h(k,i)=h(k)+i$; Quadrática: $h(k,i)=h(k)+c_1 i + c_2 i^2$; Duplo: $h(k,i)=h_1(k)+i\cdot h_2(k)$; duplo reduz clustering primário.
+%\end{enumerate}
+
+\end{document}

@@ -85,7 +85,101 @@ Mostra-se por indução que uma árvore vermelho-preto com $n$ nós tem altura n
 
 Isso garante que todas as operações de inserção, remoção e busca, que percorrem a árvore do topo até uma folha, têm custo assintótico de $O(\log n)$ no pior caso, mantendo a eficiência da estrutura mesmo após várias atualizações.
 
+
+\section{Relação com as Árvores 2-3}
+
+Uma maneira elegante de compreender as árvores vermelho-preto é enxergá-las como uma representação binária das \textbf{árvores 2-3}.
+Essa correspondência, proposta por Robert Sedgewick, revela que as propriedades das árvores vermelho-preto são equivalentes às das árvores 2-3 e explica por que elas mantêm o balanceamento de forma natural.
+
+\subsection*{Árvores 2-3}
+
+Uma árvore 2-3 é uma árvore de busca balanceada em que cada nó pode conter uma ou duas chaves:
+\begin{itemize}
+\item Um \textbf{2-nó} contém uma única chave e dois filhos (à esquerda e à direita).
+\item Um \textbf{3-nó} contém duas chaves e três filhos (à esquerda, ao centro e à direita).
+\end{itemize}
+
+Todas as folhas de uma árvore 2-3 estão no mesmo nível, o que garante que sua altura seja sempre proporcional a $\log n$.
+A ideia central das árvores vermelho-preto é simular essa mesma estrutura usando apenas ponteiros binários.
+
+\subsection*{Correspondência entre 2-3 e Vermelho-Preto}
+
+A correspondência entre as duas estruturas é simples:
+
+\begin{itemize}
+\item Cada \textbf{2-nó} de uma árvore 2-3 é representado por um nó \textbf{preto} isolado em uma árvore vermelho-preto.
+\item Cada \textbf{3-nó} é representado por dois nós conectados por um \textbf{link vermelho inclinado à esquerda}.
+\end{itemize}
+
+Em outras palavras, o \textbf{link vermelho} une duas chaves que pertenciam ao mesmo nó da árvore 2-3.
+Os \textbf{links pretos} representam conexões entre nós distintos da árvore 2-3.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\[
+\begin{array}{ccc}
+\textbf{Árvore 2-3} & & \textbf{Árvore vermelho-preto} \\[6pt]
+
+\begin{array}{ccccccc}
+  \boxed{c_0} & k_1 = 10 & \boxed{c_1} & k_2 = 20 & \boxed{c_2} \\
+  \downarrow  &           & \downarrow  &          & \downarrow  \\
+  <10 &
+  &
+  10{\,<\,}x{\,<\,}20 &
+  &
+  >20
+\end{array}
+&\qquad&
+\begin{tikzpicture}[level distance=1.2cm,
+  every node/.style={circle, minimum size=7mm, inner sep=0pt, font=\small},
+  sibling distance=2cm
+]
+\tikzset{
+  preto/.style={draw=black},
+  vermelho/.style={draw=red, text=red}
+}
+
+\node[preto] (a) {20}
+  child {
+    node[vermelho] {10}
+      child {node {<10}}
+      child {node {10<x<20}}
+  }
+  child {node {>20}};
+\end{tikzpicture}
+\end{array}
+\]
+\end{center}
+
+
+Nessa codificação, cada \textbf{link vermelho à esquerda} representa a fusão de dois nós consecutivos da árvore binária em um único 3-nó da árvore 2-3.
+Por convenção, as árvores vermelho-preto são implementadas com links vermelhos sempre inclinados à esquerda — isso evita ambiguidade e simplifica os algoritmos.
+
+\subsection*{Equivalência estrutural}
+
+Essa correspondência garante que:
+\begin{itemize}
+\item Não existem dois links vermelhos consecutivos — o que equivaleria a um nó 4 em uma árvore 2-3, proibido por definição.
+\item Todo caminho da raiz até uma folha contém o mesmo número de links pretos — o que corresponde à propriedade de que todas as folhas de uma árvore 2-3 estão na mesma profundidade.
+\end{itemize}
+
+Assim, cada árvore vermelho-preto é uma árvore binária de busca que mantém exatamente as mesmas restrições estruturais de uma árvore 2-3, mas representadas por cores em vez de múltiplas chaves por nó.
+
+\subsection*{Implicações práticas}
+
+Ver as árvores vermelho-preto como codificações de árvores 2-3 tem duas vantagens conceituais importantes:
+\begin{enumerate}
+\item Permite compreender suas operações (inserção e remoção) como transformações locais que preservam a equivalência com a árvore 2-3.
+\item Explica por que a altura das árvores vermelho-preto está limitada por $2 \log (n + 1)$: é a altura de uma árvore 2-3 “expandida” em forma binária.
+\end{enumerate}
+
+Em outras palavras, as árvores vermelho-preto combinam a \textbf{estrutura balanceada} das árvores 2-3 com a \textbf{simplicidade} das árvores binárias de busca.
+Essa visão servirá de base para entender as operações de inserção e remoção que estudaremos a seguir.
+
+
 \section{Função {\tt inserir}}
+
+\section{Inserção}
 
 A inserção em uma árvore vermelho-preto segue duas etapas principais:
 
@@ -96,153 +190,271 @@ A inserção em uma árvore vermelho-preto segue duas etapas principais:
 
 Colorir o novo nó de vermelho ajuda a manter a propriedade (5) (altura preta), mas pode violar a propriedade (4) (nenhum nó vermelho pode ter filho vermelho). Para resolver essa violação, aplicamos um procedimento de correção que depende da cor do \textit{tio} do novo nó.
 
+\subsection*{Leitura da inserção via árvores 2-3}
+
+Como vimos, uma árvore vermelho-preto pode ser interpretada como uma codificação binária de uma árvore 2-3 (links vermelhos representam a fusão local que forma um 3-nó). Nessa visão, cada passo da inserção RB corresponde a uma operação natural em 2-3:
+
+\begin{enumerate}
+  \item \textbf{Inserir como ABB} $\Rightarrow$ \textbf{descer até a folha na 2-3} e tentar acomodar a nova chave no nó corrente (um 2-nó vira 3-nó; um 3-nó pode “estourar”).
+  \item \textbf{Colorir de vermelho} $\Rightarrow$ \textbf{juntar a chave ao nó 2-3 corrente}, isto é, representar um 3-nó por um link vermelho.
+  \item \textbf{Recolorar/rotacionar} $\Rightarrow$ \textbf{corrigir estouros (split) e promover a mediana}, quando um nó temporário com três chaves (nó~4) aparece.
+\end{enumerate}
+
+\noindent\textbf{Tradução caso a caso.}
+Ao tratar a violação ``pai vermelho'', inspecionamos a cor do tio (na RB); na 2-3, isso indica se há \emph{split} ou apenas recodificação local:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}>{\bfseries}l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X@{}}
+\toprule
+Caso RB & Ação na RB & Leitura em 2-3 \\
+\midrule
+1. Tio vermelho & Flip de cores (pai/tio $\to$ preto; avô $\to$ vermelho) &
+\emph{Split} de nó 4: mediana sobe; pode propagar para cima. \\
+2. Tio preto, zig-zag & Rotação simples para “endireitar” &
+Só recodificação: 3-nó permanece o mesmo, forma canônica. \\
+3. Tio preto, em linha & Rotação + flip de cores &
+\emph{Split} local: mediana torna-se pai; filhos viram 2-nós. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\noindent\textbf{Mnemônico.}
+\[
+\underbrace{\text{flip de cores}}_{\text{RB}}
+\;\Longleftrightarrow\;
+\underbrace{\text{split de nó 4}}_{\text{2-3}}
+\qquad\text{e}\qquad
+\underbrace{\text{rotação}}_{\text{RB}}
+\;\Longleftrightarrow\;
+\underbrace{\text{reorientar / elevar a mediana}}_{\text{2-3}}.
+\]
+
+\medskip
+
 Os principais casos de rebalanceamento são:
 
 \begin{itemize}
-    \item \textbf{Caso 1 (Tio vermelho):} recolorimos pai, tio e avô.
 
-    \begin{center}
-		\begin{tikzpicture}[
-		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
-		    level distance=1.5cm, sibling distance=2.5cm
-		]
-		\tikzset{
-		    preto/.style={draw=black},
-		    vermelho/.style={draw=red, text=red}
-		}
-		\node[preto] {A}
-		  child {
-		    node[vermelho] {B}
-		    child[grow=down] { node[vermelho] {N} } % novo nó inserido
-		  }
-		  child {
-		    node[vermelho] {C}
-		  };
-		\end{tikzpicture}
-	\end{center}
+\item \textbf{Caso 1 (Tio vermelho):} recolorimos pai, tio e avô.
 
-	Depois da correção ficamos com:
-	
-	\begin{center}
-		\begin{tikzpicture}[
-		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
-		    level distance=1.5cm, sibling distance=2.5cm
-		]
-		\tikzset{
-		    preto/.style={draw=black},
-		    vermelho/.style={draw=red, text=red}
-		}
-		\node[vermelho] {A}
-		  child {
-		    node[preto] {B}
-		    child[grow=down] { node[vermelho] {N} }
-		  }
-		  child {
-		    node[preto] {C}
-		  };
-		\end{tikzpicture}
-	\end{center}
+Esse caso corresponde, na árvore 2-3, à situação em que a inserção gera temporariamente um \textbf{nó 4}, ou seja, um nó com três chaves \texttt{(B, A, C)}.  
+A recoloração na árvore vermelho-preto equivale a dividir esse nó 4 em três nós 2 separados, promovendo a chave do meio (\texttt{A}) para o nível acima.
 
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\[
+\begin{array}{ccc}
+\textbf{Árvore 2-3} & & \textbf{Árvore vermelho-preto} \\[6pt]
 
-    \item \textbf{Caso 2 (Tio preto e filho em zig-zag):} rotação simples para transformar em Caso 3.
+\begin{array}{cccccccc}
+  \boxed{}    & k_1 = B & \boxed{}    & k_2 = A & \boxed{}    & k_3 = C & \boxed{} \\
+  \downarrow  &         & \downarrow  &         & \downarrow  &         & \downarrow  \\
+              &         & [N]         &         &             &         &             \\
+\end{array}
 
-	\begin{center}
-		\begin{tikzpicture}[
-		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
-		    level distance=1.5cm, sibling distance=2.5cm
-		]
-		\tikzset{
-		    preto/.style={draw=black},
-		    vermelho/.style={draw=red, text=red}
-		}
-		\node[preto] {A}
-		  child {
-		    node[preto] {C}
-		  }
-		  child {
-		    node[vermelho] {B}
-		    child {
-		        node[vermelho] {N}
-		    }
-		    child[missing]
-		  };
-		\end{tikzpicture}
-	\end{center}
+&\qquad&
+\begin{tikzpicture}[
+  every node/.style={draw, circle, minimum size=8mm, inner sep=0pt, font=\small},
+  level distance=1.5cm, sibling distance=2.5cm
+]
+\tikzset{
+  preto/.style={draw=black},
+  vermelho/.style={draw=red, text=red}
+}
+\node[preto] {A}
+  child {
+    node[vermelho] {B}
+      child[grow=down] { node[vermelho] {N} } % novo nó inserido
+  }
+  child { node[vermelho] {C} };
+\end{tikzpicture}
+\end{array}
+\]
+\end{center}
 
-	Depois do rebalanceamento ficamos com:
-	
-	\begin{center}
-		\begin{tikzpicture}[
-		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
-		    level distance=1.5cm, sibling distance=2.5cm
-		]
-		\tikzset{
-		    preto/.style={draw=black},
-		    vermelho/.style={draw=red, text=red}
-		}
-		\node[preto] {A}
-		  child {
-		    node[preto] {C}
-		  }
-		  child {
-		    node[vermelho] {N}
-		    child[missing]
-		    child {
-		        node[vermelho] {B}
-		    }
-		  };
-		\end{tikzpicture}
-	\end{center}
+Após a recoloração, a chave \texttt{A} é promovida e as chaves \texttt{B} e \texttt{C} se tornam nós pretos independentes.  
+Na árvore 2-3, isso corresponde à divisão do nó 4 em três nós 2, mantendo o balanceamento da altura.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\[
+\begin{array}{ccc}
+\textbf{Árvore 2-3} & & \textbf{Árvore vermelho-preto} \\[6pt]
+
+\begin{array}{ccc}
+  \boxed{}           & k_1 = A & \boxed{} \\
+  \downarrow         &         & \downarrow      \\
+  \text{[B,  N]}     &         & [C]       \\
+\end{array}
 
 
+&\qquad&
+\begin{tikzpicture}[
+  every node/.style={draw, circle, minimum size=8mm, inner sep=0pt, font=\small},
+  level distance=1.5cm, sibling distance=2.5cm
+]
+\tikzset{
+  preto/.style={draw=black},
+  vermelho/.style={draw=red, text=red}
+}
+\node[vermelho] {A}
+  child {
+    node[preto] {B}
+      child[grow=down] { node[vermelho] {N} }
+  }
+  child { node[preto] {C} };
+\end{tikzpicture}
+\end{array}
+\]
+\end{center}
 
-    \item \textbf{Caso 3 (Tio preto e filho em linha):} rotação e recoloração.
 
-    \begin{center}
-		\begin{tikzpicture}[
-		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
-		    level distance=1.5cm, sibling distance=2.5cm
-		]
-		\tikzset{
-		    preto/.style={draw=black},
-		    vermelho/.style={draw=red, text=red}
-		}
-		\node[preto] {A}
-		  child {
-		    node[preto] {C}
-		  }
-		  child {
-		    node[vermelho] {B}
-		    child[missing]
-		    child {
-		        node[vermelho] {N}
-		    }
-		  };
-		\end{tikzpicture}
-	\end{center}
+\item \textbf{Caso 2 (Tio preto e filho em zig-zag):} rotação simples para transformar em Caso 3.
 
-	Depois do rebalanceamento ficamos com:
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\[
+\begin{array}{ccc}
+\textbf{Árvore 2-3} & & \textbf{Árvore vermelho-preto} \\[6pt]
 
-	\begin{center}
-		\begin{tikzpicture}[
-		    every node/.style={draw, circle, minimum size=8mm, inner sep=0pt},
-		    level distance=1.5cm, sibling distance=2.5cm
-		]
-		\tikzset{
-		    preto/.style={draw=black},
-		    vermelho/.style={draw=red, text=red}
-		}
-		\node[preto] {B}
-		  child {
-		    node[vermelho] {A}
-		    child { node[preto] {C} }
-		    child[missing]
-		  }
-		  child {
-		    node[vermelho] {N}
-		  };
-		\end{tikzpicture}
-	\end{center}
+\begin{array}{ccc}
+  \boxed{} \;     & k_1 = A & \; \boxed{} \\
+  \downarrow      &         &   \downarrow   \\
+  \text{[C]}      &         & \text{[N, B]} \\
+\end{array}
+&\qquad&
+\begin{tikzpicture}[
+  every node/.style={draw, circle, minimum size=8mm, inner sep=0pt, font=\small},
+  level distance=1.5cm, sibling distance=2.5cm
+]
+\tikzset{
+  preto/.style={draw=black},
+  vermelho/.style={draw=red, text=red}
+}
+\node[preto] {A}
+  child { node[preto] {C} }
+  child {
+    node[vermelho] {B}
+      child { node[vermelho] {N} } % N é filho à esquerda de B → zig-zag
+      child[missing]
+  };
+\end{tikzpicture}
+\end{array}
+\]
+\end{center}
+
+\noindent
+\emph{Interpretação 2-3:} o filho direito de \([A]\) é um \textbf{3-nó} \([\;N,\;B\;]\).  
+Na vermelho-preto, porém, esse 3-nó está codificado com um \textbf{link vermelho torto} (direita-depois-esquerda): é o “zig-zag”.
+
+\medskip
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\[
+\begin{array}{ccc}
+\textbf{Árvore 2-3} & & \textbf{Árvore vermelho-preto} \\[6pt]
+
+\begin{array}{ccc}
+  \boxed{} \;     & k_1 = A & \; \boxed{} \\
+  \downarrow      &         &   \downarrow   \\
+  \text{[C]}      &         & \text{[N, B]} \\
+\end{array}
+&\qquad&
+\begin{tikzpicture}[
+  every node/.style={draw, circle, minimum size=8mm, inner sep=0pt, font=\small},
+  level distance=1.5cm, sibling distance=2.5cm
+]
+\tikzset{
+  preto/.style={draw=black},
+  vermelho/.style={draw=red, text=red}
+}
+\node[preto] {A}
+  child { node[preto] {C} }
+  child {
+    node[vermelho] {N}
+      child[missing]
+      child { node[vermelho] {B} } % agora é “em linha” (equivalente ao Caso 3)
+  };
+\end{tikzpicture}
+\end{array}
+\]
+\end{center}
+
+
+\item \textbf{Caso 3 (Tio preto e filho em linha):} rotação e recoloração.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\[
+\begin{array}{ccc}
+\textbf{Árvore 2-3} & & \textbf{Árvore vermelho-preto} \\[6pt]
+
+\begin{array}{ccc}
+  \boxed{} \; & k_1 = A & \; \boxed{}  \\
+  \downarrow  &         &   \downarrow \\
+  C           &         & B, N         \\
+\end{array}
+&\qquad&
+\begin{tikzpicture}[
+  every node/.style={draw, circle, minimum size=8mm, inner sep=0pt, font=\small},
+  level distance=1.5cm, sibling distance=2.5cm
+]
+\tikzset{
+  preto/.style={draw=black},
+  vermelho/.style={draw=red, text=red}
+}
+\node[preto] {A}
+  child { node[preto] {C} }
+  child {
+    node[vermelho] {B}
+      child[missing]
+      child { node[vermelho] {N} } % em linha (direita-depois-direita)
+  };
+\end{tikzpicture}
+\end{array}
+\]
+\end{center}
+
+\noindent
+\emph{Leitura 2-3:} o filho direito de \([A]\) é o \textbf{3-nó} \([B,N]\) (com \(B < N\)).  
+Na vermelho-preto, corrigimos a codificação (link vermelho à direita e vermelho duplo) com \textbf{rotação à esquerda em \(A\)} seguida de \textbf{troca de cores}.
+
+\medskip
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\[
+\begin{array}{ccc}
+\textbf{Árvore 2-3} & & \textbf{Árvore vermelho-preto} \\[6pt]
+
+\begin{array}{ccc}
+  \boxed{\ [A]\ } & \; k_1 = B \; & \boxed{\ [N]\ } \\
+  \downarrow      &               & \downarrow      \\
+  C               &               &                 \\  
+\end{array}
+&\qquad&
+\begin{tikzpicture}[
+  every node/.style={draw, circle, minimum size=8mm, inner sep=0pt, font=\small},
+  level distance=1.5cm, sibling distance=2.5cm
+]
+\tikzset{
+  preto/.style={draw=black},
+  vermelho/.style={draw=red, text=red}
+}
+\node[preto] {B}
+  child {
+    node[vermelho] {A}
+      child { node[preto] {C} }
+      child[missing]
+  }
+  child { node[vermelho] {N} };
+\end{tikzpicture}
+\end{array}
+\]
+\end{center}
+
 
 \end{itemize}
 

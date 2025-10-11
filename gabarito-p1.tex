@@ -1,0 +1,50 @@
+\documentclass[12pt,oneside]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{lmodern}
+
+\geometry{letterpaper,margin=2.5cm}
+
+% ---------- Environments ----------
+\newtheorem{exercicio}{Exercício}
+
+% ---------- Metadata ----------
+\title{Gabarito: Tabelas de Dispersão (Hashing)}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{exercicio}
+\begin{enumerate}[label=\alph*)]
+  \item $\displaystyle \alpha=\tfrac{n}{m}=\tfrac{20}{17}\approx 1{,}18.$  
+  Em encadeamento, esse valor corresponde ao comprimento médio das listas.
+  \item Em endereçamento aberto, $\alpha$ não pode ultrapassar $1$. Como $n>m$, não é possível inserir todos os elementos. Quando $\alpha$ se aproxima de $1$, o custo das operações cresce muito devido ao \emph{clustering primário}, exigindo rehashing com uma tabela maior.
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+A função de hash precisa ser rápida de calcular e distribuir as chaves de maneira uniforme, para minimizar colisões e manter as operações em tempo médio constante.  
+Exemplo: a função multiplicativa $h(k)=\lfloor m\,(kA-\lfloor kA\rfloor)\rfloor$, com $A$ irracional, garante boa dispersão para inteiros.
+\end{exercicio}
+
+\begin{exercicio}
+\begin{enumerate}[label=\alph*)]
+  \item \textbf{Linear}: procura posições consecutivas.  
+  \textbf{Quadrática}: aumenta a distância entre sondagens de forma quadrática.  
+  \textbf{Duplo hashing}: usa uma segunda função de hash para definir o passo.
+  \item Quadrática e duplo hashing reduzem \emph{clustering primário}; o duplo hashing ainda evita \emph{clustering secundário}, pois passos variam entre as chaves.
+\end{enumerate}
+\end{exercicio}
+
+
+\end{document}
