@@ -1,0 +1,268 @@
+\chapter{Introdução a Grafos}
+
+Grafos são uma das abstrações mais versáteis da Computação. 
+Sempre que precisamos modelar entidades e suas relações --- pessoas e amizades, cidades e estradas, páginas e links, tarefas e dependências --- estamos, essencialmente, lidando com grafos. 
+Nesta aula, apresentaremos a ideia central, os conceitos básicos, os principais tipos, algumas propriedades elementares, o problema clássico das pontes de Königsberg, aplicações, e as representações mais usadas em código (matriz e lista de adjacência).
+
+\section{O que são grafos}
+
+Um \textbf{grafo} é formado por um conjunto de \textbf{vértices} (ou \emph{nós}) e um conjunto de \textbf{arestas} que conectam pares de vértices. 
+Intuitivamente, vértices representam objetos e arestas representam relações entre esses objetos.
+
+Exemplos cotidianos incluem:
+\begin{itemize}
+  \item \textbf{Rede social:} pessoas são vértices; amizades são arestas.
+  \item \textbf{Mapa:} cidades são vértices; estradas são arestas.
+  \item \textbf{Dependências:} tarefas são vértices; uma aresta indica que uma tarefa depende de outra.
+\end{itemize}
+
+\section{Conceitos fundamentais}
+
+\begin{itemize}
+  \item \textbf{Vértice (nó):} entidade básica que queremos modelar.
+  \item \textbf{Aresta (ligação):} relação entre dois vértices.
+  \item \textbf{Grau:} número de arestas incidentes a um vértice (em dígrafos, distinguimos \emph{grau de entrada} e \emph{grau de saída}).
+  \item \textbf{Caminho:} sequência de vértices conectados por arestas.
+  \item \textbf{Ciclo:} caminho que começa e termina no mesmo vértice.
+  \item \textbf{Conectividade:} dois vértices estão conectados se existe um caminho entre eles; um grafo é \emph{conexo} se qualquer vértice alcança qualquer outro.
+  \item \textbf{Componente conexa:} subgrafo conexo maximal.
+\end{itemize}
+
+\section{Tipos de grafos}
+
+Dependendo da natureza da relação, usamos variantes de grafos:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{2.8cm} p{6cm} p{5cm}@{}}
+\toprule
+\textbf{Tipo} & \textbf{Descrição} & \textbf{Exemplo prático} \\
+\midrule
+\textbf{Não direcionado} & Arestas sem orientação (relação bidirecional). & Amizade em redes sociais. \\
+\textbf{Direcionado (dígrafo)} & Arestas orientadas ($u \to v$). & Seguidores no Twitter, fluxo de dados. \\
+\textbf{Ponderado} & Arestas com pesos (custo, tempo, distância). & Rotas de transporte. \\
+\textbf{Multigrafo} & Arestas paralelas entre o mesmo par de vértices. & Linhas distintas entre duas cidades. \\
+\textbf{Com laços} & Aresta que liga um vértice a si próprio. & Dependência recursiva. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+\subsection*{Diagramas ilustrativos}
+
+% Estilos locais para os diagramas
+\newcommand{\tikzstyleset}{
+\tikzset{
+  vertex/.style={draw,circle,minimum size=8mm,inner sep=0pt},
+  edgeu/.style={-,thick},
+  edged/.style={-{Latex},thick},
+  lbl/.style={font=\small,fill=white,inner sep=1pt}
+}
+}
+
+\paragraph{Grafo não direcionado.}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=22mm]
+\tikzstyleset
+  \node[vertex] (A) {A};
+  \node[vertex, right=of A] (B) {B};
+  \node[vertex, below=of $(A)!0.5!(B)$] (C) {C};
+  \draw[edgeu] (A)--(B);
+  \draw[edgeu] (B)--(C);
+  \draw[edgeu] (C)--(A);
+\end{tikzpicture}
+\caption{Grafo não direcionado: arestas sem orientação.}
+\end{figure}
+
+\paragraph{Grafo direcionado (dígrafo).}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=24mm]
+\tikzstyleset
+  \node[vertex] (A) {A};
+  \node[vertex, right=of A] (B) {B};
+  \node[vertex, below=of $(A)!0.5!(B)$] (C) {C};
+  \draw[edged] (A) -- (B);
+  \draw[edged] (B) -- (C);
+  \draw[edged] (C) -- (A);
+\end{tikzpicture}
+\caption{Grafo direcionado: arestas com sentido ($u\to v$).}
+\end{figure}
+
+\paragraph{Grafo ponderado.}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=28mm]
+\tikzstyleset
+  \node[vertex] (A) {A};
+  \node[vertex, right=of A] (B) {B};
+  \node[vertex, below=of $(A)!0.5!(B)$] (C) {C};
+  \draw[edgeu] (A) -- (B) node[midway,above,lbl]{10};
+  \draw[edgeu] (A) -- (C) node[midway,left,lbl]{5};
+  \draw[edgeu] (B) -- (C) node[midway,right,lbl]{7};
+\end{tikzpicture}
+\caption{Grafo ponderado: cada aresta carrega um custo/distância/tempo.}
+\end{figure}
+
+\paragraph{Multigrafo (arestas paralelas).}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=40mm]
+\tikzstyleset
+  \node[vertex] (A) {A};
+  \node[vertex, right=of A] (B) {B};
+  \draw[edgeu, bend left=20]  (A) to node[above,lbl]{L1} (B);
+  \draw[edgeu, bend right=20] (A) to node[below,lbl]{L2} (B);
+\end{tikzpicture}
+\caption{Multigrafo: mais de uma aresta entre o mesmo par de vértices.}
+\end{figure}
+
+\paragraph{Grafo com laço.}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=28mm]
+\tikzstyleset
+  \node[vertex] (D) {D};
+  \node[vertex, right=of D] (E) {E};
+  \draw[edgeu] (D) -- (E);
+  \path (D) edge[loop above,thick] node[lbl]{w} ();
+\end{tikzpicture}
+\caption{Grafo com laço: aresta que sai e retorna ao mesmo vértice.}
+\end{figure}
+
+\section{Propriedades básicas}
+
+\begin{itemize}
+  \item \textbf{Ordem} de um grafo: número de vértices ($|V|$).
+  \item \textbf{Tamanho} de um grafo: número de arestas ($|E|$).
+  \item \textbf{Soma dos graus (não direcionado):} $\sum_{v\in V}\deg(v)=2|E|$.
+  \item \textbf{Em dígrafos:} $\sum \deg^+(v)=\sum \deg^-(v)=|E|$.
+  \item \textbf{Classes comuns:} grafos completos, bipartidos, regulares, árvores (conexos e acíclicos).
+\end{itemize}
+
+Essas relações ajudam a checar consistência e servem de base para algoritmos (por exemplo, muitos percorrem vizinhos de um vértice, logo custos dependem do grau).
+
+\section{O problema das pontes de Königsberg}
+
+Em 1736, Euler modelou o problema de atravessar todas as pontes da cidade de Königsberg sem repetir nenhuma. 
+Abstraindo regiões como vértices e pontes como arestas, a pergunta torna-se: \emph{existe um caminho que use cada aresta exatamente uma vez?} (caminho euleriano).
+
+O grafo abstraído possui \textbf{quatro vértices} com \textbf{graus ímpares}, o que impossibilita um percurso euleriano. 
+O critério clássico diz que um grafo conexo tem:
+\begin{itemize}
+  \item \emph{circuito euleriano} se e somente se todos os vértices têm grau par;
+  \item \emph{caminho euleriano} (não circuito) se e somente se exatamente dois vértices têm grau ímpar.
+\end{itemize}
+
+\paragraph{Abstração de Königsberg.}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=24mm]
+\tikzstyleset
+  \node[vertex] (A) {A};
+  \node[vertex, right=of A] (B) {B};
+  \node[vertex, below left=14mm and 10mm of A] (C) {C};
+  \node[vertex, below right=14mm and 10mm of B] (D) {D};
+
+  % conexões representativas (graus ímpares)
+  \draw[edgeu] (A)--(B);
+  \draw[edgeu] (A)--(C);
+  \draw[edgeu] (A)--(D);
+  \draw[edgeu] (B)--(C);
+  \draw[edgeu] (B)--(D);
+  \draw[edgeu] (C)--(D);
+\end{tikzpicture}
+\caption{Königsberg (abstração): todos os quatro vértices com grau ímpar $\Rightarrow$ sem caminho euleriano.}
+\end{figure}
+
+\section{Aplicações}
+
+Grafos aparecem em:
+\begin{itemize}
+  \item \textbf{Redes sociais e informação:} comunidade, influência, recomendações.
+  \item \textbf{Rotas e logística:} caminhos mínimos, cobertura, árvores geradoras.
+  \item \textbf{Dependências e planejamento:} ordenação topológica em DAGs.
+  \item \textbf{Computação e redes:} roteamento, conectividade, tolerância a falhas.
+  \item \textbf{Ciências naturais:} interações biológicas, redes metabólicas, ecologia.
+\end{itemize}
+
+\section{Representações em código}
+
+Para implementar algoritmos, precisamos escolher uma representação. As duas mais comuns são:
+
+\subsection*{Matriz de adjacência}
+
+Uma matriz $|V|\times|V|$ onde a entrada $(i,j)$ indica se há aresta entre $i$ e $j$ (ou o peso, em grafos ponderados).
+
+\begin{itemize}
+  \item \textbf{Espaço:} $O(|V|^2)$.
+  \item \textbf{Teste de aresta $(u,v)$:} $O(1)$.
+  \item \textbf{Iterar vizinhos de $u$:} $O(|V|)$.
+  \item \textbf{Melhor para grafos densos.}
+\end{itemize}
+
+\subsection*{Lista de adjacência}
+
+Para cada vértice, mantemos a lista dos seus vizinhos (com pesos, se houver).
+
+\begin{itemize}
+  \item \textbf{Espaço:} $O(|V|+|E|)$.
+  \item \textbf{Teste de aresta $(u,v)$:} proporcional ao grau de $u$.
+  \item \textbf{Iterar vizinhos de $u$:} $O(\deg(u))$.
+  \item \textbf{Melhor para grafos esparsos.}
+\end{itemize}
+
+\subsection*{Exemplo concreto}
+
+Considere o grafo não direcionado com $V=\{A,B,C,D\}$ e $E=\{\{A,B\}, \{A,C\}, \{B,C\}, \{C,D\}\}$.
+
+\paragraph{Matriz de adjacência ($A\!=\!0, B\!=\!1, C\!=\!2, D\!=\!3$):}
+\[
+M =
+\begin{bmatrix}
+0 & 1 & 1 & 0 \\
+1 & 0 & 1 & 0 \\
+1 & 1 & 0 & 1 \\
+0 & 0 & 1 & 0 \\
+\end{bmatrix}
+\]
+
+\paragraph{Listas de adjacência:}
+\[
+\begin{aligned}
+A &: \{B,C\} \\
+B &: \{A,C\} \\
+C &: \{A,B,D\} \\
+D &: \{C\} \\
+\end{aligned}
+\]
+
+\subsection*{Comparativo resumido}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}l c c@{}}
+\toprule
+ & \textbf{Matriz} & \textbf{Lista} \\
+\midrule
+Espaço & $O(|V|^2)$ & $O(|V|+|E|)$ \\
+Testar $(u,v)$ & $O(1)$ & $O(\deg(u))$ \\
+Iterar vizinhos & $O(|V|)$ & $O(\deg(u))$ \\
+Esparso vs denso & pior & melhor \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Encaminhamento}
+
+Nas próximas aulas, usaremos essas representações para implementar \textbf{buscas} (BFS e DFS), \textbf{caminhos mínimos} (Dijkstra, Bellman--Ford) e \textbf{árvores geradoras mínimas} (Kruskal, Prim). 
+A escolha entre matriz e lista impacta tempo e memória, portanto vale fixar bem essas diferenças desde já.
+
+\medskip
+\noindent\textbf{Exercícios sugeridos.}
+\begin{enumerate}
+  \item Dado um grafo pequeno, escreva a matriz e as listas de adjacência.
+  \item Calcule os graus e identifique componentes conexas.
+  \item Classifique: direcionado? ponderado? multigrafo? há laços?
+  \item No grafo de Königsberg, verifique os graus e conclua sobre a existência de caminho/circuito euleriano.
+\end{enumerate}
