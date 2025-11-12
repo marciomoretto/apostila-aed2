@@ -1,0 +1,363 @@
+\chapter{Busca em Grafos}
+
+Os algoritmos de busca em grafos são ferramentas fundamentais para explorar, percorrer e descobrir propriedades estruturais de um grafo. Eles permitem visitar todos os vértices e arestas de forma sistemática, servindo de base para diversos problemas clássicos, como o cálculo de \textit{caminhos mínimos}, a identificação de \textit{componentes conexas} e a \textit{ordenação topológica} de vértices em grafos direcionados acíclicos.
+
+\section{Introdução}
+
+Muitos problemas em ciência da computação, redes, engenharia e biologia podem ser modelados como grafos. Em todos esses contextos, surge a necessidade de percorrer as conexões entre vértices: verificar se há caminho entre dois pontos, medir distâncias, detectar ciclos, ou simplesmente visitar todos os vértices acessíveis a partir de uma origem.
+
+Para resolver esses problemas, é necessário um método que percorra o grafo de maneira sistemática, garantindo que todos os vértices e arestas sejam eventualmente considerados.
+
+\subsection{Visitar e Processar Vértices}
+
+Durante a execução de uma busca, distinguimos duas ações fundamentais:
+\begin{itemize}
+    \item \textbf{Visitar um vértice}: marcá-lo como descoberto, reconhecendo que ele existe e que será analisado.
+    \item \textbf{Processar um vértice}: executar alguma operação sobre ele, como imprimir, acumular informações ou verificar suas adjacências.
+\end{itemize}
+
+Em geral, cada vértice é visitado exatamente uma vez e processado conforme as necessidades do algoritmo.
+
+\subsection{Percorrendo Grafos Sistematicamente}
+
+O percurso sistemático de um grafo significa escolher uma estratégia que defina a ordem em que os vértices serão visitados. As duas abordagens clássicas são:
+\begin{itemize}
+    \item \textbf{Busca em Largura (BFS)}: explora primeiro os vértices mais próximos da origem, camada por camada.
+    \item \textbf{Busca em Profundidade (DFS)}: segue um caminho o mais fundo possível antes de retroceder.
+\end{itemize}
+
+Ambas as estratégias produzem uma \textit{árvore de busca} que descreve o caminho percorrido e podem ser adaptadas para diversas finalidades.
+
+\subsection{Contexto e Aplicações}
+
+Os algoritmos de busca constituem o ponto de partida para uma ampla classe de problemas e técnicas:
+\begin{itemize}
+    \item Encontrar caminhos mínimos em grafos não ponderados.
+    \item Determinar componentes conexas em grafos não direcionados.
+    \item Detectar ciclos e identificar subestruturas críticas.
+    \item Realizar ordenação topológica de grafos direcionados acíclicos (DAGs).
+\end{itemize}
+
+A partir dessas ideias básicas, podemos construir algoritmos mais sofisticados, como os de Dijkstra, Bellman-Ford, Kruskal e Prim, todos dependentes da noção de busca sistemática.
+
+
+\subsection{Estruturas de Apoio}
+\label{sec:estruturas-apoio}
+
+Aqui reunimos apenas as estruturas auxiliares necessárias às buscas.
+As representações de grafos (matriz e lista de adjacência) já foram tratadas no capítulo anterior.
+Deste ponto em diante, supomos disponível um operador \texttt{adjacentes(u)} que devolve (ou itera) os vizinhos de $u$.
+Com essa suposição, nossa implementação interage com o grafo \textbf{via interface}, de modo funcional, como com um \textbf{TAD (Tipo Abstrato de Dados)}: os algoritmos de busca dependem apenas das operações expostas pelo TAD, e não dos detalhes de sua representação interna.
+
+\subsubsection{Fila (para Busca em Largura --- BFS)}
+A \textbf{fila} segue a política \textit{FIFO} (\emph{first in, first out}): o primeiro elemento a entrar é o primeiro a sair.
+Na BFS, a fila preserva a exploração \emph{por camadas} a partir de uma origem $s$: primeiro, visitam-se os vizinhos de $s$;
+depois, os vizinhos desses vizinhos, e assim por diante.
+
+Operações típicas (tempo $O(1)$ amortizado):
+\begin{itemize}
+  \item \texttt{enqueue(x)}: insere $x$ no fim da fila;
+  \item \texttt{dequeue()}: remove e retorna o elemento do início;
+  \item \texttt{empty()}: indica se a fila está vazia.
+\end{itemize}
+
+\noindent
+Na prática, uma BFS mantém:
+\begin{itemize}
+  \item um vetor booleano \texttt{visitado[v]} para evitar reprocessar vértices;
+  \item (opcional) um vetor \texttt{dist[v]} com a \emph{distância em arestas} a partir de $s$;
+  \item (opcional) um vetor \texttt{pai[v]} para reconstruir o caminho.
+\end{itemize}
+
+\subsubsection{Pilha (para Busca em Profundidade --- DFS)}
+A \textbf{pilha} segue a política \textit{LIFO} (\emph{last in, first out}): o último a entrar é o primeiro a sair.
+Na DFS, a pilha garante a exploração \emph{em profundidade}, seguindo um caminho até não haver mais vizinhos não visitados
+e então retrocedendo.
+
+Há duas formas equivalentes de usar pilha na DFS:
+\begin{enumerate}
+  \item \textbf{Recursiva} (pilha implícita): cada chamada recursiva empilha o vértice atual e desempilha no retorno.
+  \item \textbf{Iterativa} (pilha explícita): usamos uma estrutura \texttt{stack} com \texttt{push}/\texttt{pop}.
+\end{enumerate}
+
+Operações típicas (tempo $O(1)$):
+\begin{itemize}
+  \item \texttt{push(x)}: empilha $x$;
+  \item \texttt{pop()}: desempilha e retorna o topo;
+  \item \texttt{top()}: consulta o topo sem remover;
+  \item \texttt{empty()}: indica se a pilha está vazia.
+\end{itemize}
+
+\noindent
+Assim como na BFS, a DFS usa um vetor \texttt{visitado[v]} para impedir revisitas. Em versões mais ricas,
+podemos usar \emph{cores} (\texttt{branco/cinzento/preto}) para distinguir estados:
+\begin{itemize}
+  \item \textbf{branco}: não descoberto;
+  \item \textbf{cinzento}: descoberto, ainda em processamento (na pilha);
+  \item \textbf{preto}: totalmente processado.
+\end{itemize}
+Essa convenção facilita a detecção de ciclos em dígrafos (arestas de retorno para vértices cinzentos).
+
+\subsection{Conjunto de Vértices Visitados (Marcação Booleana)}
+A marcação de visitados é essencial para garantir que cada vértice seja processado no máximo uma vez,
+evitando laços infinitos em presença de ciclos. As duas formas mais comuns são:
+\begin{itemize}
+  \item \textbf{Vetor booleano} \texttt{visitado[0..|V|-1]}: acesso $O(1)$, baixo overhead;
+  \item \textbf{Conjunto/hash set} \texttt{Visitados}: útil quando os identificadores não são inteiros densos,
+        ou quando os vértices são objetos.
+\end{itemize}
+
+\paragraph{Padrão de uso.}
+Ao descobrir um vizinho $v$ de $u$, marcamos \texttt{visitado[v] = true} \emph{no momento em que o enfileiramos/empilhamos},
+não quando o removemos da fila/pilha. Isso evita múltiplas inserções do mesmo vértice na estrutura de controle.
+
+\medskip
+Com essas três estruturas (fila, pilha e marcação de visitados), estamos prontos para formalizar os algoritmos de
+\textbf{Busca em Largura (BFS)} e \textbf{Busca em Profundidade (DFS)} nas próximas seções, com suas garantias e aplicações.
+
+\section{Busca em Largura (BFS)}
+\label{sec:bfs}
+
+A \textbf{Busca em Largura} explora o grafo em \emph{camadas} a partir de uma origem $s$.
+Primeiro visitamos todos os vizinhos diretos de $s$ (distância 1), depois os vizinhos desses vizinhos
+(distância 2), e assim sucessivamente. A analogia mais comum é a de \emph{ondas de propagação}:
+uma frente de exploração avança uniformemente para fora do vértice inicial.
+
+\medskip
+Como consequência, a BFS computa a \textbf{distância mínima em número de arestas} de $s$ a qualquer
+vértice alcançável (em grafos não ponderados). Além disso, o conjunto das arestas usadas na descoberta
+forma uma \emph{árvore de níveis} (ou floresta, se iniciarmos de múltiplas origens).
+
+
+\subsection{Implementação}
+
+A seguir apresentamos uma implementação direta da BFS em C, usando o TAD \texttt{Grafo} e uma fila simples baseada em vetor circular.  
+Assumimos disponíveis as funções \texttt{grafo\_num\_vertices(G)} e \texttt{grafo\_adjacentes(G, u, viz, max)}, que devolve os vizinhos de $u$ em um vetor.
+
+\begin{lstlisting}[language=C, caption={Busca em Largura (BFS)}, label={lst:bfs}]
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include "grafo_lista.h"   // ou grafo_matriz.h
+#include "fila.h"
+
+void bfs(Graph *G, int s) {
+    int n = grafo_num_vertices(G);
+    int *visitado = calloc(n, sizeof(int));
+    int *dist = malloc(sizeof(int) * n);
+    int *pai = malloc(sizeof(int) * n);
+
+    for (int i = 0; i < n; ++i) {
+        dist[i] = INT_MAX;
+        pai[i] = -1;
+    }
+
+    Fila *Q = fila_criar(n);
+    visitado[s] = 1;
+    dist[s] = 0;
+    pai[s] = s;
+    fila_enfileirar(Q, s);
+
+    while (!fila_vazia(Q)) {
+        int u = fila_desenfileirar(Q);
+        int viz[64]; // limite arbitrário
+        int k = grafo_adjacentes(G, u, viz, 64);
+
+        for (int i = 0; i < k; ++i) {
+            int v = viz[i];
+            if (!visitado[v]) {
+                visitado[v] = 1;
+                dist[v] = dist[u] + 1;
+                pai[v] = u;
+                fila_enfileirar(Q, v);
+            }
+        }
+    }
+
+    // Exemplo de saída
+    for (int v = 0; v < n; ++v) {
+        if (dist[v] < INT_MAX)
+            printf("dist[%d] = %d (pai=%d)\n", v, dist[v], pai[v]);
+        else
+            printf("dist[%d] = INF\n", v);
+    }
+
+    free(visitado);
+    free(dist);
+    free(pai);
+    fila_destruir(Q);
+}
+\end{lstlisting}
+
+
+\paragraph{Explicação da fila.}
+A fila mantém a ordem \emph{por camadas}:
+\begin{enumerate}
+  \item Inicialmente, $s$ é enfileirado com \texttt{dist[s] = 0}.
+  \item Ao desenfileirar $s$, examinamos seus vizinhos; todo vizinho ainda não visitado recebe
+        \texttt{dist = 1}, \texttt{pai = s} e é enfileirado.
+  \item Em seguida, processamos os vértices com \texttt{dist = 1}; ao visitar seus vizinhos ainda
+        não descobertos, eles passam a ter \texttt{dist = 2}, e assim por diante.
+\end{enumerate}
+O ato de \emph{marcar} \texttt{visitado[v] := verdadeiro} \emph{no momento em que $v$ é enfileirado}
+evita inserções duplicadas do mesmo vértice.
+
+\paragraph{Reconstrução de caminhos.}
+Após a BFS, se \texttt{visitado[t]} for verdadeiro, um caminho mínimo de $s$ até $t$ pode ser
+reconstruído recuando pelos ponteiros \texttt{pai}:
+$t, \texttt{pai}[t], \texttt{pai}[\texttt{pai}[t]], \dots, s$ (e depois invertendo a ordem).
+
+\subsection{Complexidade}
+Com representação por \textbf{listas de adjacência}, cada vértice entra e sai da fila no máximo uma vez,
+e cada aresta é examinada no máximo uma vez. Assim, o tempo é:
+\[
+T(|V|,|E|) = O(|V| + |E|).
+\]
+O espaço auxiliar é $O(|V|)$ para \texttt{visitado}, \texttt{dist}, \texttt{pai} e a fila.
+
+\medskip
+Em grafos \textbf{densos}, quando se usa \textbf{matriz de adjacência}, percorrer todos os vizinhos de um vértice
+custa $O(|V|)$, logo o custo total pode chegar a $O(|V|^2)$, mesmo que $|E|$ seja grande. Em contrapartida,
+a matriz permite testar adjacência em $O(1)$. Para buscas, listas de adjacência costumam ser preferíveis.
+
+\subsection{Aplicações}
+\begin{itemize}
+  \item \textbf{Distância mínima (não ponderado):} \texttt{dist[v]} fornece o menor número de arestas de $s$ a $v$.
+  \item \textbf{Conectividade:} iniciar BFS em $s$ e verificar quais vértices ficaram visitados.
+  \item \textbf{Bipartição (grafo bipartido):} colorir níveis alternadamente durante a BFS; um conflito de cores indica ímpar-ciclo.
+  \item \textbf{Árvore de níveis:} as arestas \texttt{(pai[v], v)} formam uma árvore (ou floresta) que estratifica $V$ por distância a $s$.
+\end{itemize}
+
+\paragraph{Observação prática (múltiplas origens).}
+Para múltiplas fontes $S \subseteq V$, basta enfileirar todas as origens com \texttt{dist=0} no início.
+A BFS calculará, para cada vértice, a distância até a \emph{origem mais próxima} em $S$.
+
+\section{Busca em Profundidade (DFS)}
+\label{sec:dfs}
+
+A \textbf{Busca em Profundidade} explora o grafo seguindo um caminho o mais longe possível
+antes de retroceder (\emph{backtracking}). A analogia clássica é a de um \emph{labirinto}:
+avançamos pelas bifurcações até não haver saída; então voltamos e tentamos outro caminho.
+Diferentemente da BFS (camadas), a DFS prioriza a \emph{profundidade}.
+
+\subsection{Implementação}
+
+\paragraph{Versão recursiva.}
+Usa a pilha implícita de chamadas. Mantemos \texttt{visitado}, \texttt{pai} e (opcionalmente) tempos de descoberta/fecho.
+
+\begin{lstlisting}[language=C, caption={DFS recursiva genérica em C}, label={lst:dfs-rec}]
+#include <stdio.h>
+#include <stdlib.h>
+#include "grafo_lista.h"   // ou grafo_matriz.h
+#include "pilha.h"
+
+static void dfs_visita(Graph *G, int u, int *visitado, int *pai) {
+    visitado[u] = 1;
+    int viz[64];
+    int k = grafo_adjacentes(G, u, viz, 64);
+    for (int i = 0; i < k; ++i) {
+        int v = viz[i];
+        if (!visitado[v]) {
+            pai[v] = u;
+            dfs_visita(G, v, visitado, pai);
+        }
+    }
+}
+
+void dfs(Graph *G) {
+    int n = grafo_num_vertices(G);
+    int *visitado = calloc(n, sizeof(int));
+    int *pai = malloc(sizeof(int) * n);
+    for (int i = 0; i < n; ++i) pai[i] = -1;
+
+    for (int s = 0; s < n; ++s)
+        if (!visitado[s]) {
+            pai[s] = s;
+            dfs_visita(G, s, visitado, pai);
+        }
+
+    // Exemplo de saída
+    for (int v = 0; v < n; ++v)
+        printf("pai[%d] = %d\n", v, pai[v]);
+
+    free(visitado);
+    free(pai);
+}
+\end{lstlisting}
+
+\paragraph{Versão iterativa (pilha explícita).}
+Equivale à recursiva, mas controla a pilha manualmente. Para simular o \emph{estado} da iteração
+sobre os vizinhos de cada $u$, podemos guardar o índice do próximo vizinho a explorar.
+
+\begin{lstlisting}[language=C, caption={DFS iterativa com pilha explícita}, label={lst:dfs-it}]
+typedef struct { int u, idx; } Frame; // u = vértice atual; idx = próximo vizinho a explorar
+
+void dfs_iterativa(Graph *G) {
+    int n = grafo_num_vertices(G);
+    int *visitado = calloc(n, sizeof(int));
+    int *pai = malloc(sizeof(int) * n);
+
+    for (int s = 0; s < n; ++s) if (!visitado[s]) {
+        Pilha *P = pilha_criar(n);
+        pai[s] = s;
+        visitado[s] = 1;
+        pilha_push(P, (Frame){s, 0});
+
+        while (!pilha_vazia(P)) {
+            Frame *fr = pilha_top(P);
+            int u = fr->u;
+
+            int viz[64], k = grafo_adjacentes(G, u, viz, 64);
+
+            if (fr->idx >= k) { // acabou vizinhos de u
+                pilha_pop(P);
+                continue;
+            }
+
+            int v = viz[fr->idx++];
+            if (!visitado[v]) {
+                visitado[v] = 1;
+                pai[v] = u;
+                pilha_push(P, (Frame){v, 0});
+            }
+        }
+        pilha_destruir(P);
+    }
+
+    for (int v = 0; v < n; ++v)
+        printf("pai[%d] = %d\n", v, pai[v]);
+
+    free(visitado);
+    free(pai);
+}
+\end{lstlisting}
+
+\paragraph{Controle de visitados e cores.}
+Além do booleano \texttt{visitado}, é comum usar \emph{cores} para estados:
+\texttt{branco} (não descoberto), \texttt{cinzento} (descoberto/em processamento),
+\texttt{preto} (finalizado). Em dígrafos, encontrar aresta para um vértice \texttt{cinzento}
+indica \emph{ciclo}.
+
+\subsection{Complexidade}
+Com listas de adjacência, cada vértice é processado uma vez e cada aresta é examinada no máximo
+uma vez. Portanto,
+\[
+T(|V|,|E|) = O(|V| + |E|),
+\]
+e o espaço auxiliar é $O(|V|)$ (para \texttt{visitado}, \texttt{pai} e pilha).
+Com matriz de adjacência, a DFS custa $O(|V|^2)$.
+
+\subsection{Aplicações}
+\begin{itemize}
+  \item \textbf{Detecção de ciclos:} em dígrafos, detectar arestas para vértices \texttt{cinzentos};
+        em grafos não direcionados, detectar arestas para vértices \texttt{visitados} que não sejam o \texttt{pai}.
+  \item \textbf{Componentes conexas (não direcionado):} iniciar DFS de todos os vértices não visitados; cada árvore é uma componente.
+  \item \textbf{Ordenação topológica (DAG):} empilhar o vértice ao terminar sua exploração; ao final, desempilhar em ordem fornece o topo.
+  \item \textbf{Pontes e articulações (não direcionado):} usar tempos de descoberta \(\textit{disc}[v]\) e o menor alcance \(\textit{low}[v]\)
+        (algoritmo de Tarjan): \(\textit{low}[v] = \min(\textit{disc}[v], \textit{low}[\text{filhos}], \textit{disc}[\text{retornos}])\).
+        Uma aresta \((u,v)\) é \emph{ponte} se \(\textit{low}[v] > \textit{disc}[u]\); $u$ é \emph{articulação} por condições análogas.
+\end{itemize}
+
+\paragraph{Topos práticos.}
+Para grafos grandes e profundos, prefira a versão iterativa para evitar \texttt{stack overflow}.
+Se os IDs de vértices não forem inteiros densos, substitua \texttt{visitado[]} por um \texttt{HashSet}.
