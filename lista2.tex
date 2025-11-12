@@ -1,0 +1,72 @@
+\documentclass[12pt,oneside]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{lmodern}
+
+\geometry{letterpaper,margin=2.5cm}
+
+% ---------- Environments ----------
+\newtheorem{exercicio}{Exercício}
+
+% ---------- Metadata ----------
+\title{Lista de Exercícios: Árvores}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{exercicio}
+Simule passo a passo a construção de uma árvore binária de busca inserindo, nessa ordem, as chaves:
+\[ 40,\, 20,\, 60,\, 10,\, 30,\, 50,\, 70. \]
+\begin{enumerate}[label=\alph*)]
+  \item Desenhe a árvore resultante após todas as inserções.
+  \item Em seguida, remova a chave $20$ e redesenhe a árvore.
+  \item Explique qual caso de remoção ocorreu (nó folha, nó com um filho ou nó com dois filhos).
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Usando a árvore construída no exercício anterior:
+\begin{enumerate}[label=\alph*)]
+  \item Escreva a sequência das chaves em \textbf{pré-ordem}, \textbf{em ordem} e \textbf{pós-ordem}.
+  \item Explique brevemente o significado de cada tipo de percurso e para que tipo de operação cada um é mais adequado.
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+\begin{enumerate}[label=\alph*)]
+  \item Explique o que significa uma árvore estar \textbf{balanceada}.
+  \item Por que o balanceamento é importante para o desempenho das operações de busca?
+  \item Dê um exemplo de árvore com sete nós que não está balanceada e explique como o tempo de busca piora em relação à árvore balanceada com o mesmo número de nós.
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Considere a sequência de inserções em uma árvore AVL:
+\[ 10,\, 20,\, 30,\, 40,\, 50,\, 25. \]
+\begin{enumerate}[label=\alph*)]
+  \item Mostre passo a passo como a árvore se transforma a cada inserção.
+  \item Indique onde ocorrem rotações e qual o tipo de rotação (simples à esquerda, simples à direita, dupla à esquerda ou dupla à direita).
+  \item Explique o efeito de cada rotação sobre o fator de balanceamento dos nós envolvidos.
+\end{enumerate}
+\end{exercicio}
+
+\begin{exercicio}
+Compare conceitualmente as árvores AVL e as árvores vermelho-preto.
+\begin{enumerate}[label=\alph*)]
+  \item Compare as estratégias de \textbf{balanceamento} das duas estruturas. Em que sentido uma é mais rigorosamente balanceada que a outra?
+  \item Liste as \textbf{cinco propriedades fundamentais} das árvores vermelho-preto.
+  \item Explique por que as árvores vermelho-preto são consideradas ``aproximadamente balanceadas'' e como isso afeta o desempenho das operações em relação às AVL.
+\end{enumerate}
+\end{exercicio}
+
+\end{document}
