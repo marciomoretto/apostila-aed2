@@ -302,20 +302,25 @@ Ao final, temos a MST formada pelas arestas $\{(A,B), (B,C), (A,D), (B,E)\}$.
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}[scale=1.1, every node/.style={circle, draw, fill=gray!10, inner sep=2pt}]
-\node (a) at (0,0) {A};
-\node (b) at (1.5,1) {B};
-\node (c) at (3,0.8) {C};
-\node (d) at (0.5,-1.5) {D};
-\node (e) at (2.5,-1.2) {E};
+\begin{tikzpicture}[scale=1.1]
+\tikzset{
+  vertex/.style={circle, draw, fill=gray!10, inner sep=2pt},
+  weight/.style={draw=none, fill=none, inner sep=1pt, font=\small}
+}
 
-\draw (a)--node[above left]{2}(b);
-\draw (b)--node[above]{3}(c);
-\draw (a)--node[left]{6}(d);
-\draw (b)--node[right]{8}(d);
-\draw (b)--node[right]{5}(e);
-\draw (c)--node[right]{7}(e);
-\draw (d)--node[below]{9}(e);
+\node[vertex] (a) at (0,0) {A};
+\node[vertex] (b) at (1.5,1) {B};
+\node[vertex] (c) at (3,0.8) {C};
+\node[vertex] (d) at (0.5,-1.5) {D};
+\node[vertex] (e) at (2.5,-1.2) {E};
+
+\draw (a)--node[weight, above left]{2}(b);
+\draw (b)--node[weight, above]{3}(c);
+\draw (a)--node[weight, left]{6}(d);
+\draw (b)--node[weight, right]{8}(d);
+\draw (b)--node[weight, right]{5}(e);
+\draw (c)--node[weight, right]{7}(e);
+\draw (d)--node[weight, below]{9}(e);
 \end{tikzpicture}
 \caption{Exemplo de grafo usado no algoritmo de Prim.}
 \label{fig:prim-example}
