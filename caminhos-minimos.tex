@@ -1,410 +1,570 @@
 \chapter{Caminhos Mínimos em Grafos}
 
-O problema dos \textbf{caminhos mínimos} busca determinar o caminho de menor custo entre dois vértices em um grafo ponderado. 
-Em outras palavras, dado um grafo $G = (V, E)$, com pesos $w(u,v)$ associados a cada aresta $(u,v)$, queremos encontrar o caminho de custo mínimo entre um vértice de origem e um vértice de destino.
+Neste capítulo estudamos o problema de encontrar caminhos de custo mínimo em grafos ponderados. 
+Dado um grafo $G=(V,E)$ com pesos não negativos (ou, mais geralmente, reais) associados às arestas, queremos determinar o menor custo para alcançar cada vértice a partir de uma fonte $s$.
 
-Esse tipo de problema aparece em diversas situações práticas, como:
+Esse problema aparece em contextos como:
+roteamento em redes, planejamento de trajetos, logística, análise de dependências e muitos outros. 
+Nos concentraremos nos algoritmos clássicos de caminhos mínimos a partir de uma única origem: \textbf{Dijkstra} e \textbf{Bellman--Ford}.
+
+\subsection*{Caminhos e custo}
+
+Um \textbf{caminho} em um grafo direcionado $G=(V,E)$ é uma sequência de vértices
+\[
+P = (v_0, v_1, \dots, v_k)
+\]
+tal que cada par consecutivo $(v_{i-1},v_i)$ é uma aresta do grafo:
+\[
+(v_{i-1},v_i) \in E \quad \text{para todo } i=1,\dots,k.
+\]
+
+O primeiro vértice $v_0$ é a \textbf{origem} do caminho e $v_k$ é o \textbf{destino}.
+O número $k$ é o \textbf{comprimento} (em número de arestas).
+
+Quando queremos enfatizar a origem e o destino, escrevemos
+\[
+P:\; s \leadsto v
+\]
+para indicar que $P$ é um caminho cujo primeiro vértice é $s$ e cujo último vértice é $v$.
+
+Se cada aresta $(u,v)$ possui um peso ou custo $w(u,v)$, definimos o \textbf{custo do caminho} $P$ como
+\[
+w(P) = \sum_{i=1}^k w(v_{i-1},v_i).
+\]
+
+Entre todos os caminhos que ligam $s$ a $v$, a \textbf{distância mínima} (ou custo mínimo) é
+\[
+dist(s,v) = 
+\min_{P:\, s \leadsto v} w(P).
+\]
+
+Se não existe nenhum caminho de $s$ até $v$, adotamos por convenção
+\[
+dist(s,v) = \infty.
+\]
+
+\medskip
+
+\noindent
+\textbf{Situações em que a distância mínima não existe.}
+Se o grafo contém um \emph{ciclo de custo negativo} — isto é, uma sequência de vértices
+\[
+(v_0, v_1, \dots, v_k = v_0)
+\]
+tal que
+\[
+w(v_0,v_1) + \cdots + w(v_{k-1},v_0) < 0,
+\]
+e esse ciclo é alcançável a partir de $s$, então não existe distância mínima para certos vértices.
+Isso ocorre porque podemos percorrer o ciclo negativo repetidas vezes, diminuindo
+indefinidamente o custo total do caminho:
+\[
+w(P \circ \text{(ciclo)}^m) \longrightarrow -\infty.
+\]
+
+Nessas situações, não faz sentido falar em ``menor'' caminho, e algoritmos de caminhos mínimos
+devem ser capazes de detectar a presença de ciclos negativos.
+O algoritmo de Dijkstra não funciona quando há pesos negativos, enquanto o algoritmo de Bellman--Ford
+detecta corretamente ciclos de custo negativo.
+
+\subsection*{Árvore de caminhos mínimos}
+
+Nos algoritmos apresentados aqui, além de calcular as distâncias, vamos construir uma 
+\textbf{árvore de caminhos mínimos} enraizada em $s$.
 
 \begin{itemize}
-    \item \textbf{Rotas de transporte:} determinar o trajeto mais curto entre duas cidades, ou o caminho mais rápido em um mapa (por exemplo, em sistemas de navegação como GPS ou Google Maps).
-    \item \textbf{Redes de computadores:} definir rotas eficientes para o envio de pacotes de dados, minimizando o número de saltos ou o tempo total de transmissão.
-    \item \textbf{Planejamento de tarefas e projetos:} encontrar a sequência de atividades que leva ao menor custo ou duração total, considerando dependências entre etapas.
+    \item Para cada vértice $v \neq s$, armazenamos uma aresta $(pai[v], v)$ que representa o último passo de um caminho mínimo de $s$ até $v$.
+    \item O vértice $s$ é a raiz da árvore e satisfaz $pai[s] = s$.
+    \item Percorrendo o vetor \texttt{pai[]} para trás (de $v$ até $s$), obtemos o caminho mínimo de $s$ até $v$.
 \end{itemize}
 
-Podemos classificar os problemas de caminhos mínimos em diferentes categorias, de acordo com o tipo de consulta desejada:
-
-\begin{itemize}
-    \item \textbf{Caminho mínimo a partir de uma origem} (\textit{single-source shortest path}): determinar o caminho de menor custo do vértice de origem $s$ a todos os demais vértices do grafo.
-    \item \textbf{Caminho mínimo entre todos os pares de vértices} (\textit{all-pairs shortest paths}): determinar o menor custo entre cada par $(u, v)$ de vértices do grafo.
-    \item \textbf{Caminho mínimo entre dois vértices específicos:} problema particular onde se deseja apenas o menor caminho entre $s$ e $t$.
-\end{itemize}
-
-Esses problemas têm grande importância em aplicações reais e servem de base para diversos outros algoritmos em teoria dos grafos e otimização.
-
-\section{Conceitos Fundamentais}
-
-Nesta seção apresentamos os conceitos básicos necessários para o estudo dos algoritmos de caminhos mínimos.
-
-\subsection*{Grafos Ponderados}
-
-Um \textbf{grafo ponderado} é um grafo $G = (V, E)$ no qual cada aresta $(u,v) \in E$ está associada a um número real $w(u,v)$, chamado \textbf{peso} ou \textbf{custo} da aresta. Esse peso pode representar, por exemplo, uma distância, um tempo de percurso, um custo financeiro ou uma capacidade de transmissão.
-
-\[
-w : E \rightarrow \mathbb{R}
-\]
-
-Dizemos que o grafo é \textbf{não direcionado} quando as arestas são bidirecionais (isto é, $(u,v)$ implica $(v,u)$ com o mesmo peso) e \textbf{direcionado} quando o sentido importa, isto é, $(u,v)$ e $(v,u)$ são arestas distintas, possivelmente com pesos diferentes.
-
-\subsection*{Caminho, Custo e Distância Mínima}
-
-Um \textbf{caminho} entre dois vértices $u$ e $v$ é uma sequência de vértices
-
-\[
-P = (v_0, v_1, v_2, \ldots, v_k)
-\]
-tal que $v_0 = u$, $v_k = v$ e $(v_{i-1}, v_i) \in E$ para todo $1 \le i \le k$.
-
-O \textbf{custo do caminho} $P$ é definido como a soma dos pesos de suas arestas:
-
-\[
-w(P) = \sum_{i=1}^{k} w(v_{i-1}, v_i)
-\]
-
-A \textbf{distância mínima} (ou \textbf{caminho mínimo}) entre $u$ e $v$ é o menor custo entre todos os caminhos que ligam $u$ a $v$, denotada por $dist(u,v)$:
-
-\[
-dist(u,v) = \min_{P:u \leadsto v} w(P)
-\]
-
-\subsection*{Ciclos e Pesos Negativos}
-
-Se todas as arestas possuem pesos não negativos, então a distância mínima entre dois vértices é sempre bem definida. 
-
-Por outro lado, a presença de \textbf{pesos negativos} pode causar situações problemáticas: se existir um \textbf{ciclo de custo negativo} (ou seja, um caminho fechado cuja soma dos pesos é menor que zero), então é possível reduzir indefinidamente o custo de um caminho passando várias vezes por esse ciclo. Nesse caso, a noção de caminho mínimo deixa de fazer sentido, pois o custo pode tender a $-\infty$.
-
-\subsection*{Propriedade de Otimalidade}
-
-Uma propriedade fundamental dos caminhos mínimos é a chamada \textbf{propriedade de otimalidade}:
-
-\begin{quote}
-Qualquer subcaminho de um caminho mínimo também é um caminho mínimo entre os vértices que o delimitam.
-\end{quote}
-
-Essa propriedade é a base de todos os algoritmos de caminhos mínimos, pois garante que podemos construir soluções ótimas de forma incremental, a partir de subproblemas menores.
+Matematicamente, essa árvore é um subconjunto das arestas de $G$ com exatamente uma aresta saindo do pai de cada vértice $v \neq s$.  
+Essa árvore não é conhecida a priori: iremos construí-la \textit{incrementalmente}, à medida que os algoritmos forem descobrindo novos caminhos mínimos.
 
 \section{O Princípio do Relaxamento}
 
-A ideia central dos algoritmos de caminhos mínimos é o \textbf{relaxamento de arestas}.  
-Cada vértice mantém uma \textbf{estimativa} do custo necessário para ser alcançado a partir da origem.  
-O processo de relaxamento utiliza as arestas adjacentes para tentar \textbf{melhorar} essa estimativa.
+A operação central em algoritmos de caminhos mínimos é o \textbf{relaxamento} de arestas.  
+Mantemos, para cada vértice $v$, uma estimativa $dist[v]$ do custo de um caminho de $s$ até $v$. 
+Inicialmente, $dist[s] = 0$ e $dist[v] = \infty$ para $v \neq s$.
 
-\subsection*{Ideia Central}
-
-Suponha que temos uma aresta $(u,v)$ com peso $w(u,v)$.  
-Se o caminho passando por $u$ permite chegar a $v$ com um custo menor do que o atualmente conhecido, atualizamos a estimativa de distância de $v$.  
-Formalmente, a operação de relaxamento é definida como:
+Dada uma aresta dirigida $(u,v)$ com peso $w(u,v)$, dizemos que \textbf{relaxamos} essa aresta quando executamos:
 
 \[
-\text{se } dist[v] > dist[u] + w(u,v) \text{ então:}
+\text{se } dist[v] > dist[u] + w(u,v)\text{, então}
 \]
 \[
-\quad dist[v] := dist[u] + w(u,v)
-\]
-\[
-\quad pai[v] := u
+dist[v] := dist[u] + w(u,v), \qquad pai[v] := u.
 \]
 
-Essa simples operação é o \textbf{coração} de todos os algoritmos de caminhos mínimos, desde o Dijkstra até o Bellman–Ford e Floyd–Warshall.
-
-\subsection*{Propriedades}
+Interpretando:
 
 \begin{itemize}
-    \item As estimativas armazenadas em \texttt{dist[]} são sempre \textbf{maiores ou iguais} ao valor ótimo real da distância mínima.
-    \item Quando nenhum relaxamento é mais possível, o algoritmo \textbf{convergiu}, isto é, todas as distâncias armazenadas são ótimas.
-    \item O vetor \texttt{pai[]} armazena a estrutura da árvore de caminhos mínimos, permitindo reconstruir o caminho a partir da origem.
+    \item $dist[v]$ é sempre uma estimativa \emph{superior ou igual} à distância mínima real de $s$ até $v$;
+    \item o relaxamento tenta melhorar essa estimativa, usando o caminho que passa por $u$;
+    \item quando nenhum relaxamento é mais possível (de acordo com a estratégia do algoritmo), as estimativas se tornam exatamente as distâncias mínimas.
 \end{itemize}
 
-\subsection*{Exemplo Numérico}
+O vetor \texttt{pai[]} é atualizado junto com \texttt{dist[]} e registra a estrutura da árvore de caminhos mínimos: sempre que encontramos um caminho melhor para $v$, trocamos o pai de $v$.
 
-Considere o grafo ponderado da Figura~\ref{fig:relaxamento-exemplo}, com quatro vértices e cinco arestas.  
-Inicialmente, temos $dist[s] = 0$ e $dist[v] = \infty$ para todos os outros vértices.  
-Ao relaxar as arestas que saem de $s$, obtemos novas estimativas de custo.  
-Após algumas iterações, os valores de $dist[v]$ estabilizam, representando o menor custo possível a partir de $s$.
+Esse mesmo princípio será usado tanto no algoritmo de Dijkstra quanto no algoritmo de Bellman--Ford; o que diferencia os algoritmos é \textbf{como} e \textbf{em que ordem} eles aplicam o relaxamento.
 
-\begin{figure}[h]
- \centering
- \begin{tikzpicture}[scale=1, every node/.style={circle, draw, minimum size=8mm}]
- \node (s) at (0,0) {$s$};
- \node (a) at (2,1) {$a$};
- \node (b) at (2,-1) {$b$};
- \node (t) at (4,0) {$t$};
- \draw[->, thick] (s) -- (a) node[midway, above] {2};
- \draw[->, thick] (s) -- (b) node[midway, below] {5};
- \draw[->, thick] (a) -- (b) node[midway, right] {1};
- \draw[->, thick] (a) -- (t) node[midway, above] {4};
- \draw[->, thick] (b) -- (t) node[midway, below] {2};
- \end{tikzpicture}
- \caption{Exemplo de relaxamento em um grafo ponderado.}
- \label{fig:relaxamento-exemplo}
-\end{figure}
-
-\subsection*{Implementação}
-
-A seguir, apresentamos uma função simples que implementa o relaxamento de uma aresta:
-
-\begin{lstlisting}[language=C, caption={Função de relaxamento de aresta.}]
-void relax(int u, int v, int w) {
-    if (dist[v] > dist[u] + w) {
-        dist[v] = dist[u] + w;
-        pai[v] = u;
-    }
-}
-\end{lstlisting}
-
-A operação \texttt{relax()} é usada repetidas vezes nos algoritmos de Dijkstra e Bellman–Ford, com diferentes estratégias de escolha e repetição das arestas a serem relaxadas.
-
-\section{Estratégias de Aplicação do Relaxamento}
-
-Os algoritmos de caminhos mínimos diferem essencialmente na forma como aplicam o \textbf{princípio do relaxamento}.  
-Todos realizam a mesma operação básica — tentar melhorar as estimativas de custo usando as arestas —, mas adotam estratégias distintas quanto a:
-
-\begin{itemize}
-    \item \textbf{Quantas vezes} cada aresta é relaxada;
-    \item \textbf{Em que ordem} as arestas são percorridas;
-    \item \textbf{Quando parar} o processo de relaxamento.
-\end{itemize}
-
-Essas três decisões caracterizam o comportamento e a eficiência de cada algoritmo.  
-O Dijkstra, por exemplo, escolhe sempre o vértice com a menor distância estimada e o considera \textit{finalizado}, enquanto o Bellman–Ford percorre todas as arestas várias vezes, até garantir que nenhuma melhora adicional é possível.
-
-\begin{table}[h]
-\centering
-\caption{Estratégias de aplicação do relaxamento nos principais algoritmos.}
-\begin{tabular}{|l|l|}
-\hline
-\textbf{Estratégia} & \textbf{Exemplo de Algoritmo} \\ \hline
-Relaxa apenas as arestas que saem do vértice mais próximo ainda não processado & Dijkstra \\ \hline
-Relaxa todas as arestas repetidamente, por até $|V|-1$ iterações & Bellman--Ford \\ \hline
-\end{tabular}
-\end{table}
-
-Dessa forma, podemos ver o Dijkstra como uma abordagem \textbf{gananciosa} (\textit{greedy}), que escolhe sempre a melhor opção local, e o Bellman–Ford como uma abordagem \textbf{iterativa}, baseada em \textbf{programação dinâmica}, que refina gradualmente as estimativas até atingir a solução ótima.
 
 
 \section{Algoritmo de Dijkstra}
 
-O \textbf{algoritmo de Dijkstra} resolve o problema do caminho mínimo a partir de uma origem $s$ em um grafo com pesos não negativos.  
-A ideia é expandir, passo a passo, o conjunto dos vértices cuja distância mínima já é conhecida, sempre escolhendo o vértice com a menor distância estimada até o momento.
+O algoritmo de Dijkstra resolve o problema de caminhos mínimos a partir de uma origem $s$ em grafos com pesos \textbf{não negativos}.  
+Ele combina o princípio do relaxamento com uma forma muito organizada de crescer a árvore de caminhos mínimos: a ideia de \textbf{franja} e de \textbf{vértices maduros}.
 
-A cada iteração, o algoritmo:
+\subsection*{Franja, vértices maduros e imaturos}
+
+Durante a execução do algoritmo, classificamos os vértices em dois grupos:
+
+\begin{itemize}
+    \item Um vértice é \textbf{maduro} quando sua distância mínima já foi definitivamente determinada. Dizemos que ele pertence à árvore parcial de caminhos mínimos.
+    \item Um vértice é \textbf{imaturo} quando ainda não temos certeza de que a sua estimativa $dist[v]$ é definitiva.
+\end{itemize}
+
+No início, apenas o vértice fonte $s$ é maduro; todos os demais são imaturos.
+
+Seja $T$ a árvore formada pelos vértices maduros e pelas arestas $(pai[v],v)$ correspondentes.  
+A \textbf{franja} de $T$ é o conjunto de todas as arestas
+\[
+(x \rightarrow y) \in E
+\quad\text{com}\quad
+x \text{ maduro e } y \text{ imaturo}.
+\]
+
+Essas arestas representam todas as maneiras de expandir a árvore: cada aresta da franja é uma possível entrada de um novo vértice na árvore.
+
+Para cada vértice imaturo $y$, mantemos em $dist[y]$ o melhor custo conhecido para alcançar $y$ usando \emph{alguma} aresta da franja que chega em $y$:
+
+\[
+dist[y] = \min_{(x\to y) \in \text{franja}} \left( dist[x] + w(x,y) \right).
+\]
+
+Assim, \textbf{não precisamos guardar explicitamente o conjunto de arestas da franja}:  
+ele está \emph{implicitamente} representado pelos valores $dist[y]$ dos vértices imaturos (e pelos respectivos pais $pai[y]$).
+
+Quando um vértice $y$ passa de imaturo a maduro, isso significa que sua estimativa $dist[y]$ se tornou definitiva: nenhum futuro relaxamento poderá melhorá-la.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[>=latex, scale=1.2]
+
+    % estilos
+    \tikzstyle{mature}=[circle, draw, fill=green!25, minimum size=8mm]
+    \tikzstyle{immature}=[circle, draw, fill=gray!20, minimum size=8mm]
+    \tikzstyle{franja}=[->, thick, red]
+    \tikzstyle{normal}=[->, thick]
+
+    % vértices maduros
+    \node[mature] (s) at (0,0) {$s$};
+    \node[mature] (u) at (1.5,1.2) {$u$};
+
+    % vértices imaturos
+    \node[immature] (v) at (4,1.2) {$v$};
+    \node[immature] (x) at (4,-0.3) {$x$};
+    \node[immature] (y) at (2.8,-1.4) {$y$};
+    \node[immature] (z) at (0.2,-1.6) {$z$};
+
+    % arestas normais (não franja)
+    \draw[normal,gray!60] (v) -- (x);
+    \draw[normal,gray!60] (x) -- (y);
+    \draw[normal,gray!60] (y) -- (z);
+
+    % arestas da franja (maduro -> imaturo)
+    \draw[franja] (s) -- (x);
+    \draw[franja] (s) -- (z);
+    \draw[franja] (u) -- (v);
+    \draw[franja] (u) -- (y);
+
+    % aresta madura-madura
+    \draw[normal, green!40!black] (s) -- (u);
+
+    % legenda
+    \node[align=left] at (8,0.3) {
+        \textbf{Maduros} (em verde) \\
+        \textbf{Imaturos} (em cinza) \\
+        \textbf{Franja}: arestas em vermelho \\
+        $(x \to y)$ com $x$ maduro, $y$ imaturo
+    };
+
+\end{tikzpicture}
+\caption{A franja de um conjunto de vértices maduros na execução do algoritmo de Dijkstra.}
+\label{fig:franja}
+\end{figure}
+
+
+\subsection*{Ideia geral do algoritmo}
+
+Com esses conceitos em mãos, podemos descrever o algoritmo de Dijkstra da seguinte forma:
+
 \begin{enumerate}
-    \item escolhe o vértice $u$ com menor valor de \texttt{dist[u]} ainda não processado;
-    \item marca $u$ como visitado;
-    \item relaxa todas as arestas que saem de $u$.
+    \item Inicialize $dist[s] = 0$ e $dist[v] = \infty$ para todo $v \neq s$.  
+          Inicialize $pai[v] = -1$ para todos os vértices e marque todos como \textbf{imaturos}.
+    \item Enquanto houver vértices imaturos alcançáveis a partir de $s$:
+    \begin{enumerate}
+        \item escolha o vértice imaturo $y$ com menor valor de $dist[y]$ (isto é, o vértice mais próximo da árvore atual);
+        \item declare $y$ \textbf{maduro}: a aresta $(pa[y],y)$ entra na árvore de caminhos mínimos (para $y=s$, temos $pa[s]=s$);
+        \item para cada aresta $(y \to z)$, aplique o relaxamento:
+        \[
+        \text{se } dist[z] > dist[y] + w(y,z)\text{, então } dist[z] := dist[y] + w(y,z),\ pai[z] := y.
+        \]
+        Isso atualiza as estimativas dos vértices imaturos e, portanto, atualiza a franja.
+    \end{enumerate}
 \end{enumerate}
 
-Essa estratégia garante que, quando um vértice é escolhido, sua distância já é definitiva — nenhuma atualização posterior poderá melhorá-la.
+A implementação eficiente usa uma \textbf{fila de prioridade} para manter os vértices imaturos ordenados pelos valores de $dist[v]$.  
+Essa fila é, na prática, uma forma compacta de representar e manipular a franja.
 
 \subsection*{Implementação}
 
-A seguir apresentamos uma versão simplificada do algoritmo de Dijkstra, usando lista de adjacência e uma fila de prioridade baseada em heap binário.
+A seguir apresentamos uma implementação completa, compatível com a interface \texttt{Graph} e com o TAD de fila de prioridade \texttt{PQ}:
 
-\begin{lstlisting}[language=C, caption={Implementação simplificada do algoritmo de Dijkstra.}]
-#define INF 1000000000
+\begin{lstlisting}[language=C]
+void Djikstra( Graph G, vertex s,
+                 vertex *pa, int *dist)
+{
+   bool mature[1000];
 
-void dijkstra(Grafo *G, int s) {
-    int n = G->n;
-    int dist[n], visitado[n], pai[n];
-    for (int i = 0; i < n; i++) {
-        dist[i] = INF;
-        visitado[i] = 0;
-        pai[i] = -1;
-    }
+   for (vertex v = 0; v < G->V; ++v)
+      pai[v] = -1, mature[v] = false, dist[v] = INT_MAX;
 
-    dist[s] = 0;
-    MinHeap *Q = criarHeap(n);
-    inserir(Q, s, 0);
+   pai[s] = s;
+   dist[s] = 0;
 
-    while (!vazio(Q)) {
-        int u = extrairMin(Q);
-        if (visitado[u]) continue;
-        visitado[u] = 1;
+   PQinit(G->V);
+   for (vertex v = 0; v < G->V; ++v)
+      PQinsert(v, dist);
 
-        for (Aresta *a = G->adj[u]; a != NULL; a = a->prox) {
-            int v = a->destino;
-            int w = a->peso;
-            if (dist[v] > dist[u] + w) {
-                dist[v] = dist[u] + w;
-                pai[v] = u;
-                inserir(Q, v, dist[v]);
-            }
-        }
-    }
+   while (!PQempty()) {
+      vertex y = PQdelmin(dist);
+      if (dist[y] == INT_MAX) break;
+
+      for (link a = G->adj[y]; a != NULL; a = a->next) {
+         if (mature[a->w]) continue;
+         if (dist[y] + a->c < dist[a->w]) {
+            dist[a->w] = dist[y] + a->c;
+            PQdec(a->w, dist);
+            pai[a->w] = y;
+         }
+      }
+      mature[y] = true;
+   }
+   PQfree();
 }
 \end{lstlisting}
 
-Essa implementação assume que o grafo está representado por listas de adjacência, e que existe uma estrutura de heap mínimo com operações \texttt{inserir()} e \texttt{extrairMin()}.
+\subsection*{Por que funciona}
 
-\subsection*{Exemplo de Execução}
+Com pesos não negativos, no momento em que um vértice $y$ é escolhido como o de menor $dist[y]$ entre todos os imaturos, nenhum caminho futuro poderá chegar em $y$ com custo menor.  
+Portanto, a estimativa $dist[y]$ é definitiva, e $y$ pode ser marcado como \textbf{maduro}.  
+Repetindo esse processo, construímos a árvore de caminhos mínimos completa.
 
-Considere um grafo com cinco vértices e as seguintes arestas:
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[>=latex, scale=1.1]
 
-\[
-A \xrightarrow{2} B, \quad A \xrightarrow{4} C, \quad B \xrightarrow{1} C, \quad
-B \xrightarrow{7} D, \quad C \xrightarrow{3} D
-\]
+    % estilos
+    \tikzstyle{mature}=[circle, draw, fill=green!25, minimum size=8mm]
+    \tikzstyle{immature}=[circle, draw, fill=gray!20, minimum size=8mm]
+    \tikzstyle{franja}=[->, thick, red]
+    \tikzstyle{normal}=[->, thick]
 
-Inicialmente $dist[A]=0$ e $dist[B]=dist[C]=dist[D]=\infty$.  
-Após a primeira iteração, $dist[B]=2$ e $dist[C]=4$.  
-Em seguida, o vértice $B$ é expandido e atualiza $dist[C]=3$ e $dist[D]=9$.  
-Depois $C$ é processado, atualizando $dist[D]=6$.  
-Nenhum valor é mais alterado, e o algoritmo termina.
+    %======================= ANTES =======================
+    \begin{scope}
+      \node at (2,3) {\textbf{Antes da iteração}};
+
+      % vértices maduros
+      \node[mature]   (s1) at (0,0) {$s$};
+      \node[mature]   (u1) at (1.5,1.2) {$u$};
+
+      % vértices imaturos
+      \node[immature] (v1) at (4,1.2) {$v$};
+      \node[immature] (x1) at (4,-0.3) {$x$};
+      \node[immature] (y1) at (2.8,-1.4) {$y$};
+      \node[immature] (z1) at (0.2,-1.6) {$z$};
+
+      % arestas normais (não franja) com pesos
+      \draw[normal,gray!60] (v1) -- node[right] {\small 3} (x1);
+      \draw[normal,gray!60] (x1) -- node[right] {\small 2} (y1);   % x->y = 2
+      \draw[normal,gray!60] (y1) -- node[above]  {\small 3} (z1);
+
+      % arestas da franja (maduro -> imaturo) com pesos
+      \draw[franja] (s1) -- node[below] {\small 4} (x1);           % s->x = 4
+      \draw[franja] (s1) -- node[left]  {\small 6} (z1);           % s->z = 6
+      \draw[franja] (u1) -- node[above] {\small 5} (v1);           % u->v = 5
+      \draw[franja] (u1) -- node[right] {\small 7} (y1);           % u->y = 7
+
+      % aresta maduro-maduro com peso
+      \draw[normal, green!40!black] (s1) -- node[above] {\small 2} (u1); % s->u = 2
+
+      % rótulos dist[]
+      \node at (-1.5,0)   {$dist[s]=0$};
+      \node at (1.5,2.0)  {$dist[u]=2$};
+      \node at (4,2.0)    {$dist[v]=7$};
+      \node at (5.5,-0.3) {$dist[x]=4$};
+      \node at (2.8,-2.2) {$dist[y]=9$};
+      \node at (0.2,-2.4) {$dist[z]=6$};
+
+      % destaque do próximo vértice a ser escolhido (x)
+      \draw[very thick, orange] (x1) circle [radius=0.6];
+    \end{scope}
+
+    %======================= DEPOIS =======================
+    \begin{scope}[yshift=-6.5cm]
+      \node at (2,3) {\textbf{Depois de processar $x$}};
+
+      % vértices maduros (agora s, u e x)
+      \node[mature] (s2) at (0,0) {$s$};
+      \node[mature] (u2) at (1.5,1.2) {$u$};
+      \node[mature] (x2) at (4,-0.3) {$x$};
+
+      % vértices ainda imaturos
+      \node[immature] (v2) at (4,1.2) {$v$};
+      \node[immature] (y2) at (2.8,-1.4) {$y$};
+      \node[immature] (z2) at (0.2,-1.6) {$z$};
+
+      % arestas normais com pesos
+      \draw[normal,gray!60] (v2) -- node[right] {\small 3} (x2);
+      \draw[normal,gray!60] (y2) -- node[above]  {\small 3} (z2);
+
+      % arestas da franja (maduro -> imaturo), já com x maduro
+      \draw[franja] (s2) -- node[left]  {\small 6} (z2);
+      \draw[franja] (u2) -- node[above] {\small 5} (v2);
+      \draw[franja] (u2) -- node[right] {\small 7} (y2);
+      \draw[franja] (x2) -- node[right] {\small 2} (y2);  % nova candidata via x
+
+      % arestas maduro-maduro
+      \draw[normal, green!40!black] (s2) -- node[above] {\small 2} (u2);
+      \draw[normal, green!40!black] (s2) -- node[below] {\small 4} (x2);
+
+      % rótulos dist[] atualizados
+      \node at (-1.5,0)   {$dist[s]=0$};
+      \node at (1.5,2.0)  {$dist[u]=2$};
+      \node at (4,2.0)    {$dist[v]=7$};
+      \node at (5.5,-0.3) {$dist[x]=4$};
+      \node at (2.8,-2.2) {$dist[y]=6$};  % atualizado via x
+      \node at (0.2,-2.4) {$dist[z]=6$};
+
+    \end{scope}
+
+\end{tikzpicture}
+\caption{Um passo do algoritmo de Dijkstra: o vértice imaturo $x$ com menor $dist[x]$ é escolhido, torna-se maduro e suas arestas de saída são relaxadas, atualizando as estimativas dos vértices imaturos e a franja.}
+\label{fig:dijkstra-passo}
+\end{figure}
+
+
+
 
 \subsection*{Complexidade}
 
-A complexidade do algoritmo depende da estrutura de dados usada na fila de prioridade:
+A eficiência do algoritmo de Dijkstra depende crucialmente da estrutura de dados usada para selecionar,
+a cada passo, o vértice imaturo com menor valor de \texttt{dist[]}.  
+Essa operação — escolher o próximo vértice a ser tornado maduro — é realizada por uma
+\textbf{fila de prioridade} (\textit{priority queue}), normalmente implementada como um \textbf{heap mínimo}.
+
+\medskip
+
+\noindent
+\textbf{Heap mínimo.}  
+Um heap é uma árvore binária quase completa armazenada em um vetor, na qual:
+
+\[
+\text{chave(pai)} \le \text{chave(filho)}.
+\]
+
+Assim, o menor elemento está sempre na raiz do heap e pode ser acessado em tempo $O(1)$.
+
+O heap precisa oferecer três operações fundamentais que usamos no Dijkstra:
 
 \begin{itemize}
-    \item $O(|E| \log |V|)$ usando um \textbf{heap binário};
-    \item $O(|V|^2)$ se a fila for implementada com um vetor simples.
+    \item \textbf{delmin}: remover e retornar o vértice com menor \texttt{dist[v]};  
+          \hfill custo: $O(\log |V|)$
+    \item \textbf{dec}: atualizar a chave de um vértice quando seu valor \texttt{dist[v]} diminui;  
+          \hfill custo: $O(\log |V|)$
+    \item \textbf{insert}: inserir todos os vértices no heap no início da execução;  
+          \hfill custo total: $O(|V|)$ se usado \textit{heapify}, ou $O(|V|\log|V|)$ se feito item a item
 \end{itemize}
 
-\subsection*{Observações}
+Essas operações exigem que cada vértice conheça sua posição atual no heap, para que a operação
+\texttt{PQdec(v)} possa reposicioná-lo em tempo logarítmico. 
+Assumimos que a implementação da fila de prioridade mantém esse mapeamento.
+
+\medskip
+
+\noindent
+\textbf{Contagem das operações.}
+
+Durante a execução do algoritmo:
 
 \begin{itemize}
-    \item O algoritmo de Dijkstra \textbf{não funciona} corretamente se houver arestas com pesos negativos.
-    \item Em grafos densos, a implementação com matriz e laço duplo pode ser mais simples e ainda eficiente.
-    \item A estrutura \texttt{pai[]} permite reconstruir o caminho mínimo percorrendo os vértices de trás para frente.
+    \item Cada vértice é removido da fila \emph{exatamente uma vez} por \texttt{PQdelmin}.  
+          São $|V|$ remoções, cada uma custando $O(\log |V|)$.
+    \item Cada aresta pode causar no máximo \emph{uma} chamada bem-sucedida a \texttt{PQdec},  
+          pois cada relaxamento bem-sucedido reduz a distância de um vértice uma única vez.  
+          São no máximo $|E|$ chamadas, cada uma custando $O(\log |V|)$.
 \end{itemize}
 
+Somando esses custos:
 
-\subsection*{Estrutura de Dados: Fila de Prioridade (Heap)}
-
-O desempenho do algoritmo de Dijkstra depende fortemente da estrutura de dados usada para escolher o vértice com a menor distância ainda não processado.  
-Essa escolha é feita por meio de uma \textbf{fila de prioridade}, uma estrutura que permite inserir elementos e extrair rapidamente aquele com a menor (ou maior) prioridade.
-
-\subsubsection*{Definição de Heap}
-
-Um \textbf{heap mínimo} é uma árvore binária quase completa que satisfaz a \textbf{propriedade do heap}:
 \[
-\text{para todo nó } i, \quad \text{chave}(i) \leq \text{chave}(filhos(i))
+O(|V|\log|V|) \;+\; O(|E|\log|V|) \;=\; O(|E|\log|V|).
 \]
 
-Em um heap mínimo, o elemento de menor valor (menor prioridade) está sempre na raiz, o que permite removê-lo em tempo $O(\log n)$.
+\medskip
 
-\subsubsection*{Principais Operações}
+
+\section{Algoritmo de Bellman--Ford}
+
+O algoritmo de Bellman--Ford resolve o problema dos caminhos mínimos a partir de uma origem $s$
+mesmo quando o grafo possui arestas de peso negativo.
+Além disso, o algoritmo é capaz de detectar a existência de ciclos de custo negativo
+alcançáveis a partir de $s$.
+
+Ao contrário do Dijkstra, o Bellman--Ford \textbf{não usa franja}
+e \textbf{não pressupõe} que as estimativas se tornam definitivas
+à medida que o algoritmo progride.
+Em vez disso, ele se apoia inteiramente no \textbf{princípio do relaxamento}.
+
+\subsection*{Ideia básica}
+
+Um caminho simples (sem repetir vértices) possui no máximo $|V|-1$ arestas.
+Portanto, se não houver ciclos negativos,
+após realizar o relaxamento de \emph{todas} as arestas do grafo
+\textbf{$|V|-1$ vezes},
+todas as estimativas \texttt{dist[]}
+terão alcançado os valores ótimos.
+
+Após essas iterações, se ainda existir alguma aresta $(u,v)$
+tal que
+
+\[
+dist[v] > dist[u] + w(u,v),
+\]
+
+então existe um ciclo negativo acessível a partir da origem.
+
+\medskip
+
+Essa formulação — dois laços aninhados — é a versão clássica do algoritmo.
+Mas ela faz trabalho desnecessário:
+relaxamos todas as arestas em todas as iterações,
+mesmo que muitas delas não possam mais melhorar nada.
+
+Uma implementação muito mais eficiente usa uma \textbf{fila} de vértices cujas estimativas acabaram de melhorar e que ainda podem melhorar os vizinhos.
+
+\subsection*{Descrição do algoritmo}
+
+Mantemos:
 
 \begin{itemize}
-    \item \textbf{inserir(elemento, prioridade)} — insere um novo elemento na fila, reorganizando o heap para manter a propriedade.  
-    \hfill Complexidade: $O(\log n)$
-    \item \textbf{extrairMin()} — remove e retorna o elemento com menor prioridade (a raiz do heap).  
-    \hfill Complexidade: $O(\log n)$
-    \item \textbf{diminuirChave(elemento, novaPrioridade)} — reduz o valor da prioridade de um elemento já presente, reposicionando-o na árvore.  
-    \hfill Complexidade: $O(\log n)$
+    \item o vetor de estimativas \texttt{dist[]};
+    \item o vetor de pais \texttt{pai[]};
+    \item uma fila com vértices que precisam ser processados;
+    \item um vetor booleano \texttt{onqueue[]} indicando se um vértice está na fila.
 \end{itemize}
 
-Essas operações são implementadas de forma eficiente sobre um vetor, sem necessidade de ponteiros explícitos.  
-Os índices dos filhos e do pai de um elemento armazenado na posição $i$ são calculados da seguinte forma:
+O algoritmo começa com apenas o vértice fonte na fila.
+Sempre que uma estimativa \texttt{dist[w]} melhora,
+o vértice $w$ é colocado na fila (se ainda não estiver lá).
 
-\[
-\text{pai}(i) = \lfloor i/2 \rfloor, \quad \text{filhoEsq}(i) = 2i, \quad \text{filhoDir}(i) = 2i + 1
-\]
-
-\subsubsection*{Uso do Heap no Dijkstra}
-
-No algoritmo de Dijkstra, o heap mantém os vértices do grafo organizados pela distância estimada \texttt{dist[v]}.  
-A cada iteração:
-
-\begin{enumerate}
-    \item O vértice $u$ com menor \texttt{dist[u]} é removido do heap usando \texttt{extrairMin()};
-    \item As distâncias dos vértices adjacentes são atualizadas e, quando diminuem, o heap é ajustado com \texttt{inserir()} ou \texttt{diminuirChave()}.
-\end{enumerate}
-
-Como cada aresta pode provocar uma atualização de prioridade e cada extração custa $O(\log |V|)$, a complexidade total é:
-
-\[
-O(|E| \log |V|)
-\]
-
-Essa é a principal razão pela qual o algoritmo de Dijkstra é tão eficiente em grafos grandes e esparsos.
-
-\section{Algoritmo de Bellman-Ford}
-
-O \textbf{algoritmo de Bellman-Ford} também resolve o problema do caminho mínimo a partir de uma origem $s$, mas, ao contrário do Dijkstra, ele permite a existência de arestas com pesos negativos.  
-Sua ideia é simples e elegante: repetir o processo de relaxamento de todas as arestas do grafo várias vezes, até que todas as estimativas de distância se estabilizem.
-
-Como o caminho mínimo simples (sem ciclos) entre dois vértices tem, no máximo, $|V| - 1$ arestas, basta realizar $|V| - 1$ iterações de relaxamento sobre todas as arestas do grafo.
-
-Em cada iteração, o algoritmo tenta melhorar as distâncias conhecidas aplicando o mesmo princípio do relaxamento:
-
-\[
-\text{se } dist[v] > dist[u] + w(u,v) \text{ então } dist[v] := dist[u] + w(u,v)
-\]
+Para controlar o número de ``rodadas'' completas de relaxamentos,
+usamos um \textbf{sentinela} $V$ na fila.
+A cada vez que o sentinela é retirado da fila, isso indica que uma rodada terminou.
+Se fizermos $|V|$ rodadas, então existe um ciclo negativo acessível.
 
 \subsection*{Implementação}
 
-A seguir, uma implementação simplificada do algoritmo de Bellman--Ford usando uma lista de arestas:
+\begin{lstlisting}[language=C]
+bool bellmannFord( Graph G, vertex s, vertex *pa, int *dist)
+{
+   QUEUEinit( G->A);
+   bool onqueue[1000];
 
-\begin{lstlisting}[language=C, caption={Implementação simplificada do algoritmo de Bellman-Ford.}]
-#define INF 1000000000
+   for (vertex u = 0; u < G->V; ++u)
+      pa[u] = -1, dist[u] = INT_MAX, onqueue[u] = false;
 
-typedef struct {
-    int u, v, w;
-} Aresta;
+   pa[s] = s;
+   dist[s] = 0;
 
-void bellmanFord(Aresta E[], int V, int Etotal, int s) {
-    int dist[V], pai[V];
+   QUEUEput( s );
+   onqueue[s] = true;
 
-    for (int i = 0; i < V; i++) {
-        dist[i] = INF;
-        pai[i] = -1;
-    }
-    dist[s] = 0;
+   vertex V = G->V;     // pseudovértice sentinela
+   QUEUEput( V );       // marca o fim da primeira rodada
 
-    for (int i = 1; i < V; i++) {
-        for (int j = 0; j < Etotal; j++) {
-            int u = E[j].u;
-            int v = E[j].v;
-            int w = E[j].w;
-            if (dist[u] + w < dist[v]) {
-                dist[v] = dist[u] + w;
-                pai[v] = u;
+   int k = 0;           // número de rodadas realizadas
+
+   while (true) { 
+      vertex v = QUEUEget();
+
+      if (v < V) {      // v é vértice real
+         for (link a = G->adj[v]; a != NULL; a = a->next) {
+            if (dist[v] + a->c < dist[a->w]) {
+               dist[a->w] = dist[v] + a->c; 
+               pa[a->w] = v;
+               if (!onqueue[a->w]) {
+                  QUEUEput( a->w );
+                  onqueue[a->w] = true;
+               }
             }
-        }
-    }
+         }
+      } 
+      else {            // encontramos o sentinela
+         if (QUEUEempty())
+            return true;   // nenhuma melhora possível: sucesso
 
-    // detecção de ciclo negativo
-    for (int j = 0; j < Etotal; j++) {
-        int u = E[j].u;
-        int v = E[j].v;
-        int w = E[j].w;
-        if (dist[u] + w < dist[v]) {
-            printf("Ciclo negativo detectado!\n");
-            return;
-        }
-    }
+         if (++k >= G->V)
+            return false;  // ciclo negativo detectado
+
+         QUEUEput( V );    // prepara a próxima rodada
+         for (vertex u = 0; u < G->V; ++u)
+            onqueue[u] = false;
+      }
+   }
 }
 \end{lstlisting}
 
-\subsection*{Detecção de Ciclos Negativos}
+\subsection*{Corretude}
 
-A etapa final verifica se ainda é possível reduzir alguma distância após as $|V|-1$ iterações.  
-Se alguma aresta $(u,v)$ ainda satisfaz $dist[v] > dist[u] + w(u,v)$, isso significa que existe um \textbf{ciclo de custo negativo} acessível a partir da origem — e, portanto, não há solução finita para o problema do caminho mínimo.
+Se não houver ciclos negativos, então o algoritmo executa no máximo $|V|-1$ rodadas de relaxamento global, e todas as distâncias finais serão ótimas.
+
+Se houver um ciclo negativo alcançável, então as estimativas continuarão melhorando indefinidamente, o sentinela será removido da fila ao menos $|V|$ vezes e o algoritmo detectará isso pelo contador $k$.
 
 \subsection*{Complexidade}
 
-O algoritmo realiza $|V|-1$ passagens sobre todas as $|E|$ arestas do grafo.  
-Assim, sua complexidade é:
+No algoritmo com fila, um vértice $v$ entra na fila sempre que sua estimativa \texttt{dist[v]} diminui.
+Em grafos sem ciclos negativos, a distância de um vértice pode melhorar no máximo $|V|-1$ vezes, pois um caminho simples possui no máximo $|V|-1$ arestas.
+
+Cada vez que um vértice é retirado da fila, percorremos todas as arestas que saem dele, realizando possíveis relaxamentos.  
+Assim, no pior caso, cada vértice pode ser processado até $|V|-1$ vezes, e cada processamento
+examinará seu leque de saída:
 
 \[
-O(|V| \times |E|)
+O((|V|-1)\cdot |E|) = O(|V||E|).
 \]
 
-Embora mais lento que o Dijkstra em grafos sem pesos negativos, o Bellman--Ford é mais geral e confiável quando há possibilidade de pesos negativos nas arestas.
+\medskip
 
-\section{Comparação e Discussão}
+\noindent
+\textbf{Observação.}
+Esse pior caso é raro.
+Na maioria dos grafos, as estimativas \texttt{dist[]} estabilizam rapidamente, e apenas poucos vértices entram na fila.
+Quando isso ocorre, o número de relaxamentos executados é muito menor que $|V||E|$, tornando o algoritmo substancialmente mais rápido na prática.
 
-Os algoritmos de Dijkstra e Bellman-Ford resolvem o mesmo problema -- o cálculo dos caminhos mínimos a partir de uma origem —, mas adotam estratégias bastante diferentes.  
-Enquanto o Dijkstra é mais eficiente e utiliza uma abordagem gananciosa (\textit{greedy}), o Bellman--Ford é mais geral e se baseia em uma abordagem iterativa de programação dinâmica.
 
-A Tabela~\ref{tab:comparacao} resume as principais diferenças entre os dois algoritmos.
+\section{Comparação entre Dijkstra e Bellman--Ford}
 
 \begin{table}[h]
 \centering
-\caption{Comparação entre os algoritmos de Dijkstra e Bellman--Ford.}
-\label{tab:comparacao}
 \begin{tabular}{|l|c|c|}
 \hline
 \textbf{Característica} & \textbf{Dijkstra} & \textbf{Bellman--Ford} \\ \hline
-Pesos negativos & \ding{55} & \ding{51} \\ \hline
-Complexidade & $O(|E| \log |V|)$ & $O(|V| \times |E|)$ \\ \hline
-Estrutura & Fila de prioridade (heap) & Lista de arestas \\ \hline
-Estratégia & Gananciosa (\textit{greedy}) & Iterativa (dinâmica) \\ \hline
+Pesos negativos & não & sim \\ \hline
+Detecta ciclo negativo & não & sim \\ \hline
+Estratégia & franja + heap & relaxamentos iterativos \\ \hline
+Complexidade típica & $O(|E|\log|V|)$ & $O(|V||E|)$ \\ \hline
+Estrutura usada & fila de prioridade (heap) & fila comum \\ \hline
 \end{tabular}
 \end{table}
-
-O algoritmo de Dijkstra é, portanto, a escolha natural para grafos com pesos não negativos e grande número de vértices, sendo amplamente usado em sistemas de roteamento e navegação.  
-Já o Bellman-Ford, embora mais custoso, é indispensável quando há possibilidade de pesos negativos, pois consegue detectar ciclos de custo negativo e lidar corretamente com essas situações.
-
-Ambos os algoritmos são aplicações diretas do \textbf{princípio do relaxamento}, o qual constitui a base de quase todos os métodos modernos de otimização em grafos.  
-Compreender esse princípio é essencial para entender não apenas Dijkstra e Bellman--Ford, mas também algoritmos mais avançados como Floyd--Warshall e Johnson.
